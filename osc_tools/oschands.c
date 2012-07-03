@@ -40,6 +40,8 @@ int done = 0;
 
 void error(int num, const char *m, const char *path);
 
+int valid_port (int port);
+
 int joint_handler(const char *path, const char *types, lo_arg **argv, int argc,
 		void *data, void *user_data);
 
@@ -59,28 +61,20 @@ int main (int argc, char * argv[])
       exit(1);
     } // if
 
-  char read_port[6];
-  int ret;
-
-  /* use liblo to check if read port is valid */
-  if ((ret = snprintf(read_port, 6, "%s", argv[1])) < 0)
+  if (!valid_port (argv[1]))
     {
-      printf("- Invalid read port -");
-      exit(ret);
-    } // if
+      printf (" -Invalid Read Port- ");
+      exit (argv[1]);
+    }
 
-  char write_port[6];
-
-  /* use liblo to check if write port is valid */
-  if ((ret = snprintf(write_port, 6, "%s", argv[2])) < 0)
+  if (!valid_port (argv[2]))
     {
-      printf("- Invalid write port -");
-      exit(ret);
-    } // if
+      printf (" -Invalid Write Port -");
+      exit (argv[2]);
+    }
 
   /* if ports are okay, start a new server with error handler */
   lo_server_thread st = lo_server_thread_new(read_port, error);
-
   lo_address addr = lo_address_new("127.0.0.1", write_port);
 
   /* add method that will handle joints */
@@ -116,6 +110,12 @@ void error(int num, const char *msg, const char *path)
   printf("liblo server error %d in path %s: %s\n", num, path, msg);
 } // error
 
+/* stub for validating ports... to be implemented later */
+void valid_port (int port)
+{
+  return 1;
+} // valid_port
+ 
 /* catch joint messages and send only l_hand and r_hand messages */
 int joint_handler(const char *path, const char *types, lo_arg **argvx, 
 		    int argc, void *data, void *user_data)

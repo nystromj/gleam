@@ -1,11 +1,16 @@
 ; add second hand / more joints?
 ; divide into folders
-; make a list of gestures
-; start defining gestures
 ; study tries and add functionality to c file
 ; initialization function using orient signal
 ; perfect pausing (shorter time required to pause?)
      ; if you move two directions at once, it will print stopped moving twice 2 seconds later
+; for diagonal gestures if not declared separately: call both directional handlers
+; take out repetitive code and replace with higher order procedures
+; add-joint function
+; something easier for defining a whole bunch of gestures?
+; gesture na,es?
+
+(define DONE #t)
 
 
 (define x 0)
@@ -31,7 +36,7 @@
 (define right (make-joint))
 
 ;;; the amount a joint must moved before it is considered a movement
-(define movement-threshold 0.08)
+(define movement-threshold 0.05)
 
 ;; speed thresholds to determine if the joint is moving slowly or quickly
 (define fast-threshold .15)
@@ -504,48 +509,190 @@
    (lambda (speed)
       (< (abs speed) slow-threshold)))
 
-(define movement-count 0)
+;;; CONTROLS
 
-(define gesture-left-up (joint-up? left))
-
-(define gesture-left-up-right 
-   (lambda () 
-      (and (joint-up? left) (joint-right? left))))
-
-(define gesture-left-up-fast
+(define start!
    (lambda ()
-      (and (joint-up? left) (movement-fast? (calculate-speed left y)))))
+      (set! DONE #f)
+      (set! left (make-joint))
+      (track-gestures)))
 
-;;; PROCEDURE:
-;;;   track-changes?
-;;; PARAMETERS:
-;;;   joint, the joint vector
-;;;   axis, the x y or z axis   
-;;; PURPOSE: 
-;;;   checks to see whether recently stored pos indicates a change in direction
-;;; PRODUCED: 
-;;;   NULL
-;;; PRECONDITIONS:
-;;;   joint and axis have already been defined and are not null
-;;; POSTCONDITIONS:
-;;;   calls handlers
-(define track-changes
-   (lambda (joint axis)                   
-      (set! movement-count (+ movement-count 1))
-      (print 'movement movement-count 'detected)
-      (cond ((joint-still? joint)
-             (print "left hand has stopped moving"))
-            ((equal? axis x)
-             (if (joint-right? joint)
-                 (print "left hand is now moving right")
-                 (print "left hand is now moving left")))
-            ((equal? axis y)
-             (if (joint-up? joint)
-                 (print "left hand is now moving up")
-                 (print "left hand is now moving down")))
-            ((equal? axis z)
-             (if (joint-forward? joint)
-                 (print "left hand is now moving forward")
-                 (print "left hand is now moving backward"))))))
-                 
-            
+(define stop! 
+   (lambda ()
+      (set! DONE #t)))
+
+(define resume! 
+   (lambda ()
+      (set! DONE #f)
+      (track-gestures)))
+
+(stop!)
+(resume!)
+(start!)
+
+;;; GESTURE HELPERS
+
+(define track-gestures
+   (lambda ()
+      (when (not DONE)
+            (cond ((gesture-left-forward)
+                   (left-forward-handler))
+                  ((gesture-left-backward)
+                   (left-backward-handler))
+                  ((gesture-left-down)
+                   (left-down-handler))
+                  ((gesture-left-right)
+                   (left-right-handler))
+                  ((gesture-left-left)
+                   (left-left-handler))
+                  ((gesture-left-up)
+                   (left-up-handler))
+                  ((joint-still? left)
+                   (left-still-handler)))
+            (callback (+ (now) (* *second* .1)) 'track-gestures))))
+
+(define simultaneous? 
+   (lambda (joint axis1 axis2)
+      (<= (abs (- (get-current-time joint axis1) (get-current-time joint axis2))) 100000)))
+
+(define all-simultaneous? 
+   (lambda (joint)
+      (and (simultaneous? joint x y) (simultaneous? joint y z))))
+
+;;; GESTURES AND HANDLERS
+
+
+; left hand up
+(define gesture-left-up
+   (lambda ()
+      (joint-up? left)))
+
+;; (define left-up-handler print-up)
+
+; left hand down
+(define gesture-left-down
+   (lambda ()
+      (joint-down? left)))
+
+;; (define left-down-handler print-down)
+
+; left hand right
+(define gesture-left-right
+   (lambda ()
+      (joint-right? left)))
+
+;; (define left-right-handler print-right)
+
+; left hand left
+(define gesture-left-left
+   (lambda ()
+      (joint-left? left)))
+
+;; (define left-left-handler print-left)
+
+; left hand forward
+(define gesture-left-forward
+   (lambda ()
+      (joint-forward? left)))
+
+;; (define left-forward-handler print-forward)
+
+; left hand backward
+(define gesture-left-backward
+   (lambda ()
+      (joint-backward? left)))
+
+;; (define left-backward-handler print-backward)
+
+; left hand up and right
+(define gesture-left-up-right
+   (lambda ()
+      (and (joint-up? left)
+           (joint-right? left)
+           (simultaneous? left x y))))
+                                 
+; left hand up and left
+(define gesture-left-up-left
+   (lambda ()
+      (and (joint-up? left)
+           (joint-left? left)
+           (simultaneous? left x y))))
+
+; left hand down and right
+(define gesture-left-down-right
+   (lambda ()
+      (and (joint-down? left)
+           (joint-right? left)
+           (simultaneous? left x y))))
+
+; left hand down and left
+(define gesture-left-down-left
+   (lambda ()
+      (and (joint-down? left)
+           (joint-left? left)
+           (simultaneous? left x y))))
+
+;;; HANDLERS
+
+(define print-left
+   (lambda ()
+      (print 'left)))
+
+(define print-right
+   (lambda ()
+      (print 'right)))
+
+(define print-up
+   (lambda ()
+      (print 'up)))
+
+(define print-down
+   (lambda ()
+      (print 'down)))
+
+(define print-forward
+   (lambda ()
+      (print 'forward)))
+
+(define print-backward
+   (lambda () 
+      (print 'backward)))
+
+(define print-still
+   (lambda ()
+      (print 'still)))
+
+(define alternate-print-left
+   (lambda ()
+      (print 'hand-is-moving-left)))
+
+;;; HANDLER HOLDERS
+
+(define gesture-handlers
+   (list (cons gesture-left-up print-up)
+         (cons gesture-left-down print-down)
+         (cons gesture-left-right print-right)
+         (cons gesture-left-left print-left)))
+
+(define get-gesture-handler 
+   (lambda (gesture)
+      (let ((p (assoc gesture gesture-handlers)))
+         (if p
+             (cdr p)
+             (error "handler not found")))))
+
+(define evaluate-gesture-handler
+   (lambda (gesture)
+      ((get-gesture-handler gesture))))
+
+(define gesture-change-handler! 
+   (lambda (gesture function)
+      (let ((p (assoc gesture gesture-handlers)))
+         (if p
+             (set-cdr! p function)
+             (error "handler not found")))))
+
+(define combine-handlers
+   (lambda (handler1 handler2)
+      (handler1)
+      (handler2)))

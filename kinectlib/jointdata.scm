@@ -1,14 +1,11 @@
 ; add second hand / more joints?
 ; divide into folders
 ; study tries and add functionality to c file
-; initialization function using orient signal
-; perfect pausing (shorter time required to pause?)
-     ; if you move two directions at once, it will print stopped moving twice 2 seconds later
 ; for diagonal gestures if not declared separately: call both directional handlers
 ; take out repetitive code and replace with higher order procedures
 ; add-joint function
-; something easier for defining a whole bunch of gestures?
-; gesture na,es?
+; gesture names?
+; delete gesture function -> converts diagonals into combinations
 
 (define DONE #t)
 
@@ -535,21 +532,9 @@
 (define track-gestures
    (lambda ()
       (when (not DONE)
-            (cond ((gesture-left-forward)
-                   (left-forward-handler))
-                  ((gesture-left-backward)
-                   (left-backward-handler))
-                  ((gesture-left-down)
-                   (left-down-handler))
-                  ((gesture-left-right)
-                   (left-right-handler))
-                  ((gesture-left-left)
-                   (left-left-handler))
-                  ((gesture-left-up)
-                   (left-up-handler))
-                  ((joint-still? left)
-                   (left-still-handler)))
+            (check-gestures)
             (callback (+ (now) (* *second* .1)) 'track-gestures))))
+
 
 (define simultaneous? 
    (lambda (joint axis1 axis2)
@@ -666,6 +651,10 @@
    (lambda ()
       (print 'hand-is-moving-left)))
 
+(define gesture-left-still
+   (lambda ()
+      (joint-still? left)))
+
 ;;; HANDLER HOLDERS
 
 (define gesture-handlers
@@ -680,6 +669,22 @@
          (if p
              (cdr p)
              (error "handler not found")))))
+
+(define check-gesture
+   (lambda (gesture-pair)
+      (let ((gesture (car gesture-pair)))
+         (if (gesture)
+             (evaluate-gesture-handler gesture)))))
+
+;delete-gesture! stub
+
+(define add-gesture! 
+   (lambda (gesture handler)
+      (append gesture-handlers (cons gesture handler)))))
+            
+(define check-gestures
+   (lambda ()
+      (map check-gesture gesture-handlers)))
 
 (define evaluate-gesture-handler
    (lambda (gesture)

@@ -1,18 +1,23 @@
 ; add second hand / more joints?
 ; divide into folders
 ; study tries and add functionality to c file
-; for diagonal gestures if not declared separately: call both directional handlers
 ; take out repetitive code and replace with higher order procedures
-; add-joint function
-; gesture names?
-; delete gesture function -> converts diagonals into combinations
+
+; test speed
+; how to handle diagonals : right now, would call diagonal-up-right, up and right, etc.
+
+; enabling/disabling gestures
+; enabling/disabling joints
+; generating gestures for joints
 
 (define DONE #t)
-
 
 (define x 0)
 (define y 1)
 (define z 2)
+
+(define left (make-joint))
+(define right (make-joint))
 
 ;;; makes an axis vector that stores positions of the joint along the axis 
 (define make-axis
@@ -27,10 +32,6 @@
       (vector (make-axis)        ;; x
               (make-axis)        ;; y
               (make-axis))))     ;; z
- 
-;;; joint vectors     
-(define left (make-joint))
-(define right (make-joint))
 
 ;;; the amount a joint must moved before it is considered a movement
 (define movement-threshold 0.05)
@@ -41,17 +42,64 @@
 
 (io:osc:start-server 7110)
 (define (io:osc:receive timestamp address . args)
-   (cond ((string=? (list-ref args 0) "l_hand")
-          (if (movement? left x (list-ref args 2))
-              (store-pos! left x (list-ref args 2))
-              (check-axis-still! left x))
-          (if (movement? left y (list-ref args 3))
-              (store-pos! left y (list-ref args 3))
-              (check-axis-still! left y))
-          (if (movement? left z (list-ref args 4))
-              (store-pos! left z (list-ref args 4))
-              (check-axis-still! left z)))))
+   (if (equal? (list-ref args 1) 1)
+       (oscdata-process args)))
 
+(define make-joint-vector
+  (lambda (joint-pair)
+     (set! (cdr joint-pair) make-joint)))
+
+(define make-joint-vectors
+   (lambda ()
+      (map make-joint-vector joints)))
+
+(define joint-add! 
+   (lambda (oscjoint joint)
+      (append joints (cons oscjoint joint))))
+
+; stub
+(define joint-ignore!
+   (lambda (oscjoint)
+      (let ((joint (assoc oscjoint joints)))))))
+
+(define joints
+   (list (cons "l_hand" left)
+         (cons "r_hand" right)))
+
+(define process-axis-coordinates
+   (lambda (joint axis coord)
+      (if (movement? joint axis coord)
+          (store-pos! joint axis coord)
+          (check-axis-still! joint axis))))
+
+(define process-joint-coordinates
+   (lambda (joint coords)
+      (map process-axis-coordinates (make-list 3 joint) (list x y z) coords)))
+
+(define oscdata-process
+   (lambda (oscdata)
+      (let ((joint (assoc (car oscdata) joints)))
+         (if joint
+             (process-joint-coordinates (cdr joint) (cddr oscdata))))))
+
+(print (oscstring->joint "l_hand"))
+
+(define oscstring->joint
+   (lambda (oscstring)
+      (let ((joint-pair (assoc oscstring joints)))
+         (if joint-pair
+             (cdr joint-pair)
+             (error "osc string not found")))))
+
+(define joint->oscstring
+   (lambda (joint)
+      (let ((joint-pair (assf (lambda (arg)
+                                 (equal? arg joint))
+                              joints)))
+         (if joint-pair
+             (car joint-pair)
+             (error "joint not found")))))
+      
 ;;; PROCEDURE:
 ;;;   movement?
 ;;; PARAMETERS:
@@ -75,7 +123,6 @@
              (* 2 movement-threshold))
           (> (abs (- (/ (get-current-pos joint axis) 100) new-pos)) 
              movement-threshold))))
-
 
 ;;; PROCEDURE:
 ;;;   increment-counter!
@@ -511,7 +558,6 @@
 (define start!
    (lambda ()
       (set! DONE #f)
-      (set! left (make-joint))
       (track-gestures)))
 
 (define stop! 
@@ -544,50 +590,37 @@
    (lambda (joint)
       (and (simultaneous? joint x y) (simultaneous? joint y z))))
 
-;;; GESTURES AND HANDLERS
+;;; GESTURES
 
-
-; left hand up
+; joint hand up
 (define gesture-left-up
    (lambda ()
       (joint-up? left)))
-
-;; (define left-up-handler print-up)
 
 ; left hand down
 (define gesture-left-down
    (lambda ()
       (joint-down? left)))
 
-;; (define left-down-handler print-down)
-
 ; left hand right
 (define gesture-left-right
    (lambda ()
       (joint-right? left)))
-
-;; (define left-right-handler print-right)
 
 ; left hand left
 (define gesture-left-left
    (lambda ()
       (joint-left? left)))
 
-;; (define left-left-handler print-left)
-
 ; left hand forward
 (define gesture-left-forward
    (lambda ()
       (joint-forward? left)))
 
-;; (define left-forward-handler print-forward)
-
 ; left hand backward
 (define gesture-left-backward
    (lambda ()
       (joint-backward? left)))
-
-;; (define left-backward-handler print-backward)
 
 ; left hand up and right
 (define gesture-left-up-right
@@ -617,7 +650,40 @@
            (joint-left? left)
            (simultaneous? left x y))))
 
-;;; HANDLERS
+; left hand forward and right
+(define gesture-left-forward-right
+   (lambda ()
+      (and (joint-forward? left)
+           (joint-right? left)
+           (simultaneous? left x z))))
+
+; left hand forward and left
+(define gesture-left-forward-left
+   (lambda ()
+      (and (joint-forward? left)
+           (joint-left? left)
+           (simultaneous? left x z))))
+
+; left hand backward and right 
+(define gesture-left-backward-right
+   (lambda ()
+      (and (joint-backward? left)
+           (joint-right? left)
+           (simultaneous? left x z))))
+
+(define gesture-right-still
+   (lambda ()
+      (joint-still? right)))
+
+(define gesture-right-up
+   (lambda ()
+      (joint-up? right)))
+
+(define gesture-right-down
+   (lambda ()
+      (joint-down? right)))
+
+;;; TEST HANDLERS
 
 (define print-left
    (lambda ()
@@ -657,47 +723,65 @@
 
 ;;; HANDLER HOLDERS
 
-(define gesture-handlers
-   (list (cons gesture-left-up print-up)
-         (cons gesture-left-down print-down)
-         (cons gesture-left-right print-right)
-         (cons gesture-left-left print-left)))
+(define gesture-stub (lambda ()))
 
-(define get-gesture-handler 
+(define gesture-handlers
+   (list (cons gesture-left-up gesture-stub)
+         (cons gesture-left-down gesture-stub)
+         (cons gesture-left-right print-right)
+         (cons gesture-left-left print-left)
+         (cons gesture-right-up print-up)
+         (cons gesture-right-down print-down)))
+
+(define gesture-get-handler 
    (lambda (gesture)
-      (let ((p (assoc gesture gesture-handlers)))
-         (if p
-             (cdr p)
+      (let ((pair (assoc gesture gesture-handlers)))
+         (if pair
+             (cdr pair)
              (error "handler not found")))))
 
 (define check-gesture
    (lambda (gesture-pair)
       (let ((gesture (car gesture-pair)))
          (if (gesture)
-             (evaluate-gesture-handler gesture)))))
+             (gesture-evaluate-handler gesture)))))
 
-;delete-gesture! stub
-
-(define add-gesture! 
-   (lambda (gesture handler)
-      (append gesture-handlers (cons gesture handler)))))
+(define gesture-disable! 
+   (lambda (gesture)
+      (gesture-change-handler! gesture-stub)))
             
+(define gesture-enable! 
+   (lambda (gesture handler)
+      (let ((pair (assoc gesture gesture-handlers)))
+         (if pair
+             (error "gesture already exists!")
+             (append! gesture-handlers (cons gesture handler))))))
+          
 (define check-gestures
    (lambda ()
-      (map check-gesture gesture-handlers)))
+      (for-each check-gesture gesture-handlers)))
 
-(define evaluate-gesture-handler
+(define gesture-evaluate-handler
    (lambda (gesture)
-      ((get-gesture-handler gesture))))
+      ((gesture-get-handler gesture))))
 
 (define gesture-change-handler! 
    (lambda (gesture function)
-      (let ((p (assoc gesture gesture-handlers)))
-         (if p
-             (set-cdr! p function)
+      (let ((pair (assoc gesture gesture-handlers)))
+         (if pair
+             (set-cdr! pair function)
              (error "handler not found")))))
 
-(define combine-handlers
-   (lambda (handler1 handler2)
-      (handler1)
-      (handler2)))
+;;; PROGRAMMER FUNCTIONS
+
+(define movement-threshold-set! 
+   (lambda (new-threshold)
+      (set! movement-threshold new-threshold)))
+
+(define fast-threshold-set! 
+   (lambda (new-threshold)
+      (set! fast-threshold new-threshold)))
+
+(define slow-threshold-set! 
+   (lambda (new-threshold)
+      (set! slow-threshold new-threshold)))

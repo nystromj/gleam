@@ -7,7 +7,6 @@
 ; init and joint vectors
 ; does storage work?
 
-; change two-handed gestures to work with oscstrings and check if both hands are active
 ; change oscstring to oscjoint?
 ; modify start and stop?
 
@@ -15,22 +14,34 @@
 ; fast and slow! 
 ; default gestures
 
-; right now the hand that always has to be enabled is right hand. keep or change? 
+; right now the hand that always has to be enabled is right hand. keep or change?
+
+; fix prevous
+; change to global variables
+; get it to evaluate correctly
+
+; get something to wrap handlers
+; pass parameters to handlers 
+
+; check naming on functions
+; distinguish user functions
+
+; should i remove list-append and speed functions if not in use?
 
 ;----------; GLOBALS ;----------;
 
-; determines whether gestures should be detected. If true, no gestures are being recognized.
+;;; determines whether gestures should be detected
 (define DONE #t)
 
-; binds axes with index variables for referencing axis vectors
+;;; binds axes with index variables for referencing axis vectors
 (define x 0)
 (define y 1)
 (define z 2)
 
-;;; the amount a joint must moved before it is considered a movement
+;;; the amount a joint must move before it is considered a movement
 (define movement-threshold 0.05)
 
-;; speed thresholds to determine if the joint is moving slowly or quickly
+;;; speed thresholds to determine if the joint is moving slowly or quickly
 (define fast-threshold .15)
 (define slow-threshold .01)
 
@@ -70,14 +81,14 @@
 ;;;   calls oscdata-process, defined later
 (define io:osc:receive 
    (lambda (timestamp address . args)
-   (if (equal? (list-ref args 1) 1)
+   (if (and (equal? (list-ref args 1) 1) (not DONE))
        (oscdata-process args))))
 
 
 ;----------; JOINTS ;----------;
 
 
-; list of enabled joints -> left hand and right hand are default
+;;; list of enabled joints -> left hand and right hand are default
 (define joints
    (list (cons "l_hand" (make-joint))
          (cons "r_hand" (make-joint))))
@@ -541,7 +552,7 @@
                         (get-counter joint axis)))))
 
 ;;; PROCEDURE:
-;;;   get-prevous-pos
+;;;   get-previous-pos
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
 ;;;   axis, the x y or z vector
@@ -559,7 +570,7 @@
                        (get-previous-counter joint axis)))))
 
 ;;; PROCEDURE:
-;;;   get-prevous-counter
+;;;   get-previous-counter
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
 ;;;   axis, the x y or z vector
@@ -578,7 +589,7 @@
           (- (get-counter joint axis) 1))))
 
 ;;; PROCEDURE:
-;;;   get-prevous-time
+;;;   get-previous-time
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
 ;;;   axis, the x y or z vector
@@ -618,21 +629,74 @@
 
 ;----------; JOINT BEHAVIOR ;----------;
 
+;;; PROCEDURE:
+;;;   joint-still? 
+;;; PARAMETERS:
+;;;   joint, the joint vector
+;;; PURPOSE: 
+;;;   determines whether the joint has stopped making registered movements
+;;; PRODUCED: 
+;;;   boolean, whether the joint is still
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   if true, no new positions have been stored recently for the joint's axes
 (define joint-still? 
    (lambda (joint)
       (and (axis-still? joint x)
            (axis-still? joint y)
            (axis-still? joint z))))
 
+;;; PROCEDURE:
+;;;   axis-still? 
+;;; PARAMETERS:
+;;;   joint, the joint vector
+;;;   axis, index to the axis vector of the joint
+;;; PURPOSE: 
+;;;   determines whether the joint is moving along the given axis
+;;; PRODUCED: 
+;;;   boolean, whether the joint is still
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   if true, no new positions have been stored recently for that axis
+;;;   and the direction of the joint is zero.
 (define axis-still? 
    (lambda (joint axis)
       (equal? (get-direction joint axis) 0)))
 
+;;; PROCEDURE:
+;;;   check-axis-still! 
+;;; PARAMETERS:
+;;;   joint, the joint vector
+;;;   axis, index to the axis vector for the joint
+;;; PURPOSE: 
+;;;   checks to see if the joint has stopped moving along the axis
+;;;   changes the joint's direction if appropriate
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   the direction of the joint is not already zero
+;;; POSTCONDITIONS:
+;;;   if the joint has stopped moving along the axis, direction for that axis is zero
 (define check-axis-still!
    (lambda (joint axis)
       (if (and (axis-stopped? joint axis) (not (axis-still? joint axis)))
           (set-direction! joint axis 0))))
 
+;;; PROCEDURE:
+;;;   axis-stopeed? 
+;;; PARAMETERS:
+;;;   joint, the joint vector
+;;;   axis, index to the axis vector for the joint
+;;; PURPOSE: 
+;;;   determines whether the joint axis has stored any new positions recently
+;;; PRODUCED: 
+;;;   boolean, whether positions have been stored recently
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   if true, no new positions have been stored recently for the joint's axes
 (define axis-stopped? 
    (lambda (joint axis)
       (>= (- (now) (get-current-time joint axis)) (* *second* 2))))
@@ -1004,6 +1068,7 @@
 
 ;----------; GESTURE SET UP ;----------;
 
+;;; two-handed gestures do not take joints as parameters and have only one handler
 (define two-handed-gestures
    (list (cons gesture-both-hands-right 'NULL)
          (cons gesture-both-hands-left 'NULL)
@@ -1021,6 +1086,18 @@
          (cons gesture-both-hands-down-in 'NULL)
          (cons gesture-both-hands-still 'NULL)))
 
+;;; PROCEDURE:
+;;;   two-handed? 
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;; PURPOSE: 
+;;;   determines whether the gesture is two-handed
+;;; PRODUCED: 
+;;;   boolean, whether the gesture is two-handed
+;;; PRECONDITIONS:
+;;;   gesture is a predefined function
+;;; POSTCONDITIONS:
+;;;   returns true if gesture is a member of two-handed-gestures list
 (define two-handed?
    (lambda (gesture) 
       (let ((member (assoc gesture two-handed-gestures)))
@@ -1028,6 +1105,7 @@
            #t
            #f))))
 
+;;; simple gestures take a joint as a parameter and only deal with one axis
 (define simple-gestures
    (list gesture-joint-up
       gesture-joint-down
@@ -1037,12 +1115,26 @@
       gesture-joint-backward
       gesture-joint-still))
 
+;;; PROCEDURE:
+;;;   simple? 
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;; PURPOSE: 
+;;;   determines whether the gesture function is a simple gesture
+;;; PRODUCED: 
+;;;   boolean, whether the gesture is simple
+;;; PRECONDITIONS:
+;;;   gesture is a predefined function
+;;; POSTCONDITIONS:
+;;;   returns true if gesture is a member of simple-gestures list
 (define simple? 
    (lambda (gesture)
          (if (list-index simple-gestures gesture)
              #t
              #f)))
 
+;;; multidirectional gestures take a joint as a parameter and determine if there
+;;; is movement in multiple directions
 (define multidirectional-gestures 
    (list gesture-joint-right-up
          gesture-joint-right-down
@@ -1065,12 +1157,25 @@
          gesture-joint-left-down-forward
          gesture-joint-left-down-backward))
 
+;;; PROCEDURE:
+;;;   multidirectional? 
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;; PURPOSE: 
+;;;   determines whether the gesture function is a multidirectional gesture
+;;; PRODUCED: 
+;;;   boolean, whether the gesture is multidirecitonal
+;;; PRECONDITIONS:
+;;;   gesture is a predefined function
+;;; POSTCONDITIONS:
+;;;   returns true if gesture is a member of multidirectional-gestures list
 (define multidirectional? 
    (lambda (gesture)
          (if (list-index multidirectional-gestures gesture)
              #t
              #f)))
 
+;;; appends the list of joint gestures together and adds default handlers
 (define gestures (map (lambda (elt)
                          (cons elt (list (cons "l_hand" 'NULL)
                                          (cons "r_hand" 'NULL))))
@@ -1110,28 +1215,64 @@
    (lambda ()
       (print 'hand-is-moving-left)))
 
-; get change-handlers to work
 ; make sure evaluate-all-gestures works!
 ; gesture-evaluate-list adds to ignored for no reason! 
 
 ;----------; GESTURE TRACKING ;----------;
 
-
+;;; list of joints that should be ignored
 (define ignored '(NULL))
 
+;;; PROCEDURE:
+;;;   ignored? 
+;;; PARAMETERS:
+;;;   oscjoint, the osc string for the joint
+;;; PURPOSE: 
+;;;   determines whether the joint is being ignored
+;;; PRODUCED: 
+;;;   boolean, whether the joint is ignored
+;;; PRECONDITIONS:
+;;;   should only be called by handler-evaluating functions
+;;;   a joint is set ignored by handler-evaluating functions
+;;; POSTCONDITIONS:
+;;;   returns true if oscjoint is a member of ignored list
 (define ignored? 
-   (lambda (oscstring)
-      (if (list-index ignored oscstring)
+   (lambda (oscjoint)
+      (if (list-index ignored oscjoint)
           #t
           #f)))
 
+;;; PROCEDURE:
+;;;   track-gestures 
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   runs a loop that checks for gestures
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   called by start!, not explicity by programmer
+;;; POSTCONDITIONS:
+;;;   NULL
 (define track-gestures
    (lambda ()
       (when (not DONE)
             (gesture-evaluate-list)
             (callback (+ (now) (* *second* .1)) 'track-gestures))))
 
-; adds joints to ignored whne it shouldn't
+;;; PROCEDURE:
+;;;   gesture-evaluate-list 
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   checks the gestures in the gesture list once
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   if both hands are enabled it evaluates two-handed gestures before evaluating
+;;;   the gestures list
 (define gesture-evaluate-list
    (lambda ()
       (set! ignored '(NULL))
@@ -1139,21 +1280,63 @@
           (gesture-evaluate-two-handed-gestures two-handed-gestures))
       (for-each gesture-evaluate-pair gestures)))
 
-; tested
+;;; PROCEDURE:
+;;;   gesture-evaluate-pair 
+;;; PARAMETERS:
+;;;   gesture-pair, a cons cell
+;;; PURPOSE: 
+;;;   calls gesture-evaluate-joint for each joint in the handler list
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   gesture-pair is a cons cell whose car is a gesture function and whose cdr 
+;;;   is the handler list for that gesture
+;;; POSTCONDITIONS:
+;;;   gesture-evaluate-joint is called on every element in the handler list
 (define gesture-evaluate-pair
    (lambda (gesture-pair)
       (map (lambda (handler-pair)
               (gesture-evaluate-joint (car gesture-pair) (car handler-pair) (cdr handler-pair)))
            (cdr gesture-pair))))
 
-;tested
+;;; PROCEDURE:
+;;;   gesture-evaluate-joint 
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;;   joint, a joint vector
+;;;   handler, a handler function
+;;; PURPOSE: 
+;;;   determines if the gesture is true for the joint and calls handler processing
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   should be called only by gesture-evaluate-pair
+;;;   in order for handler to evaluate, joint should not be ignored and the handler
+;;;   should not be null.
+;;; POSTCONDITIONS:
+;;;   if the preconditions are met and the gesture is true for the joint, calls
+;;;   gesture-evaluate-handler
 (define gesture-evaluate-joint
    (lambda (gesture joint handler)
       (if (and (not (ignored? joint)) (not (equal? handler 'NULL)))
           (if (gesture (oscstring->joint joint))
               (gesture-evaluate-handler gesture joint handler)))))
 
-;tested
+;;; PROCEDURE:
+;;;   gesture-evaluate-handler 
+;;; PARAMETERS:
+;;;   gesture, a gseture function
+;;;   joint, a joint vecor
+;;;   handler, a handler function
+;;; PURPOSE: 
+;;;   evaluates the handler function then sets the joint to ignored if 
+;;;   gesture if multi-directional
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   should only be called by gesture-evaluate-joint
+;;; POSTCONDITIONS:
+;;;   if gesture was multidirectional, joint is now ignored
 (define gesture-evaluate-handler 
    (lambda (gesture joint handler)      
       (handler)
@@ -1161,7 +1344,20 @@
       (if (multidirectional? gesture)
           (list-prepend! ignored joint))))
 
-; tested
+;;; PROCEDURE:
+;;;   gesture-evaluate-two-handed-gestures 
+;;; PARAMETERS:
+;;;   lst, a list of cons cells
+;;; PURPOSE: 
+;;;   calls gesture-evaluate-two-handed-gesture pair for each element in list
+;;; PRODUCED: 
+;;;   boolean, whether the joint is still
+;;; PRECONDITIONS:
+;;;   should only be called by gesture-evaluate-list
+;;;   each cons cell in list has a two-handed-gesture function as its 
+;;;   car and a handler as its cdr.
+;;; POSTCONDITIONS:
+;;;   stops executing after a two-handed gesture in lst returns true
 (define gesture-evaluate-two-handed-gestures
    (lambda (lst)
       (cond ((null? lst)
@@ -1169,7 +1365,21 @@
             ((gesture-evaluate-two-handed-gesture-pair (car lst)))
             (else (gesture-evaluate-two-handed-gestures (cdr lst))))))
 
-; tested
+;;; PROCEDURE:
+;;;   gesture-evaluate-two-handed-gesture-pair 
+;;; PARAMETERS:
+;;;   gesture-pair, a cons cell
+;;; PURPOSE: 
+;;;   determines if gesture is true for joint and executes handler
+;;; PRODUCED: 
+;;;   boolean, whether the handler was executed
+;;; PRECONDITIONS:
+;;;   gesture-pair is a cons cell whose car is a two-handed gesture 
+;;;   function and whose cdr is the handler for that gesture
+;;;   handler must not be 'NULL
+;;; POSTCONDITIONS:
+;;;   if the gesture test returned true and handler was not 'NULL, handler 
+;;;   was executed and both hands are added to the ignored list.
 (define gesture-evaluate-two-handed-gesture-pair
    (lambda (gesture-pair)
       (cond ((and ((car gesture-pair)) (not (equal? (cdr gesture-pair) 'NULL)))
@@ -1202,14 +1412,41 @@
 
 ;----------; HANDLER MANAGEMENT ;---------;
 
-; works for two-handed-gestures but not for simple gestures! 
+;;; PROCEDURE:
+;;;   gesture-change-handler!
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;;   function, the new handler
+;;;   [oscjoint], optional osc string for joint
+;;; PURPOSE: 
+;;;   changes the handler for the given gesture
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   oscjoint is NULL if the gesture is a two-handed gesture
+;;; POSTCONDITIONS:
+;;;   changes the gesture's handler to the given handler
 (define gesture-change-handler! 
-   (lambda (gesture function . oscstring)
-      (if (null? oscstring)
+   (lambda (gesture function . oscjoint)
+      (if (null? oscjoint)
           (gesture-two-handed-change-handler! gesture function)
-          (gesture-simple-change-handler! gesture function (car oscstring)))))
+          (gesture-simple-change-handler! gesture function (car oscjoint)))))
 
-; seems to work, but not within call to gesture-change-handler!
+;;; PROCEDURE:
+;;;   gesture-simple-change-handler!
+;;; PARAMETERS:
+;;;   gesture, a simple or multidirectioanl gesture
+;;;   function, the new handler
+;;;   oscjoint, an oscstring for a joint
+;;; PURPOSE: 
+;;;   changes the gesture's handler for the given joint
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   should be called only by gesture-change-handler!
+;;; POSTCONDITIONS:
+;;;   changes the gesture's handler for the joint to the given function
+;;;   returns an error if the joint is not enabled
 (define gesture-simple-change-handler! 
    (lambda (gesture function oscstring)
       (let ((pair (assoc gesture gestures)))
@@ -1217,7 +1454,20 @@
              (set-cdr! (assoc oscstring (cdr pair)) function)
              (error "gesture not found")))))
 
-; tested
+;;; PROCEDURE:
+;;;   gesture-two-handed-change-handler!
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;;   function, the new handler
+;;; PURPOSE: 
+;;;   changes the handler for the given two-handed gesture
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   should be called only by gesture-change-handler!
+;;; POSTCONDITIONS:
+;;;   changes the gesture's handler to the given function
+;;;   returns an error if gesture is not in the two-handed-gestures list
 (define gesture-two-handed-change-handler! 
    (lambda (gesture function)
       (let ((pair (assoc gesture two-handed-gestures)))
@@ -1225,39 +1475,124 @@
              (set-cdr! pair function)
              (error "gesture not found")))))
 
-; not working for simple gestures even though gesture-change-handler! seems to work
+;;; PROCEDURE:
+;;;   gesture-disable! 
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;;   [oscjoint], an optional osc string for a joint
+;;; PURPOSE: 
+;;;   sets the handler for the given gesture to 'NULL
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   oscjoint is null if gesture is a two-handed-gesture
+;;; POSTCONDITIONS:
+;;;   calls gesture-change-handler! with 'NULL as an argument
+;;;   the gesture will no longer be evaluated
 (define gesture-disable! 
    (lambda (gesture . oscstring)
-      (if (null? oscstring)
-          (gesture-change-handler! gesture 'NULL)
-          (gesture-change-handler! gesture 'NULL (car oscstring)))))
+      (gesture-change-handler! gesture 'NULL (car oscstring))))
 
 
 ;----------; PROGRAMMER CONTROLS ;----------;
 
+;;; PROCEDURE:
+;;;   movement-threshold-set!
+;;; PARAMETERS:
+;;;   new-threshold, an integer
+;;; PURPOSE: 
+;;;   changes the movement-threshold to new-threshold
+;;; PRODUCED: 
+;;;   NULL, called for side-effects
+;;; PRECONDITIONS:
+;;;   movement-threshold is the distance a joint must move along an axis
+;;;   until its movement is registered
+;;; POSTCONDITIONS:
+;;;   movement-threshold is now new-threshold
 (define movement-threshold-set! 
    (lambda (new-threshold)
       (set! movement-threshold new-threshold)))
 
+;;; PROCEDURE:
+;;;   fast-threshold-set! 
+;;; PARAMETERS:
+;;;   new-threshold, an integer
+;;; PURPOSE: 
+;;;   sets the fast-threshold to new-threshold
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   fast-threshold is the speed a joint must be going to be considered fast
+;;; POSTCONDITIONS:
+;;;   fast-threshold is now new-threshold
 (define fast-threshold-set! 
    (lambda (new-threshold)
       (set! fast-threshold new-threshold)))
 
+;;; PROCEDURE:
+;;;   slow-threshold-set! 
+;;; PARAMETERS:
+;;;   new-threshold, an integer
+;;; PURPOSE: 
+;;;   sets the slow-threshold to new-threshold
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   slow-threshold is the speed a joint must be going to be considered slow
+;;; POSTCONDITIONS:
+;;;   slow-threshold is now new-threshold
 (define slow-threshold-set! 
    (lambda (new-threshold)
       (set! slow-threshold new-threshold)))
 
+;;; PROCEDURE:
+;;;   start! 
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   activates gesture-recognition
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   DONE is currently #t
+;;; POSTCONDITIONS:
+;;;   DONE is now #f and gestures are being processed
 (define start!
    (lambda ()
       (set! DONE #f)
       (track-gestures)))
 
+;;; PROCEDURE:
+;;;   stop! 
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   stops gesture-recognition
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   DONE is currently #f
+;;; POSTCONDITIONS:
+;;;   DONE is now #t and gestures are not being processed
 (define stop! 
    (lambda ()
       (set! DONE #t)))
 
 ;----------; LIST HELPERS ;----------;
 
+;;; PROCEDURE:
+;;;   list-append! 
+;;; PARAMETERS:
+;;;   lst, a list
+;;;   val, a value
+;;; PURPOSE: 
+;;;   adds val to the end of list
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   lst cannot be empty
+;;; POSTCONDITIONS:
+;;;   val is now at the end of lst
 (define list-append!
   (lambda (lst val)
     (if (null? (cdr lst))
@@ -1265,6 +1600,64 @@
         (list-append! (cdr lst) val))
     lst))                             
 
+;;; PROCEDURE:
+;;;   list-prepend! 
+;;; PARAMETERS:
+;;;   lst, a list
+;;;   val, a value
+;;; PURPOSE: 
+;;;   adds val to the start of list
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   lst cannot be empty
+;;; POSTCONDITIONS:
+;;;   val is now at the start of lst
+(define list-prepend!
+  (lambda (lst val)
+    (let ((newtail (cons (car lst) (cdr lst))))
+      (set-car! lst val)
+      (set-cdr! lst newtail)
+      lst)))
+
+
+;;; PROCEDURE:
+;;;   list-delete! 
+;;; PARAMETERS:
+;;;   lst, a list
+;;;   val, a value
+;;; PURPOSE: 
+;;;   deletes first instance of val from list
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   val cannot be the last value in the list
+;;; POSTCONDITIONS:
+;;;   the first instance of val is removed
+(define list-delete!
+  (lambda (lst val)
+    (cond
+      ((null? (cdr lst)))
+      ((equal? val (car lst))
+       (set-car! lst (cadr lst))
+       (set-cdr! lst (cddr lst)))
+      (else
+       (list-delete! (cdr lst) val)))
+    lst))
+
+;;; PROCEDURE:
+;;;   list-index 
+;;; PARAMETERS:
+;;;   lst, a list
+;;;   val, a value
+;;; PURPOSE: 
+;;;   returns the position of val in lst
+;;; PRODUCED: 
+;;;   pos, the position of val
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   pos if false if val is not in list
 (define get-index 
   (lambda (lst val current)
       (cond ((equal? 0 (length lst))
@@ -1277,28 +1670,3 @@
 (define list-index 
   (lambda (lst val)
     (get-index lst val 0)))
-
-(define list-delete!
-  (lambda (lst val)
-    (cond
-      ; Can't delete the last thing in a list
-      ((null? (cdr lst)))
-      ; Delete the first thing in the list
-      ((equal? val (car lst))
-       (set-car! lst (cadr lst))
-       (set-cdr! lst (cddr lst)))
-      ; Everything else
-      (else
-       (list-delete! (cdr lst) val)))
-    lst))
-
-(define list-prepend!
-  (lambda (lst val)
-    ; Build a new cons cell for the old list
-    (let ((newtail (cons (car lst) (cdr lst))))
-      ; Shove the new value at the front
-      (set-car! lst val)
-      ; Shove the new cons cell at the back
-      (set-cdr! lst newtail)
-      ; And we're done
-      lst)))

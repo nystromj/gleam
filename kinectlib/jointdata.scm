@@ -1,32 +1,24 @@
-; take out repetitive code and replace with higher order procedures
-; document and distinguish program and background functions
 ; make a wiki?
 
-; what to do with the joint vectors (global vs. in assoc list)
-
-; init and joint vectors
 ; does storage work?
 
 ; change oscstring to oscjoint?
-; modify start and stop?
 
-; should my map procedures be for-eaches? 
 ; fast and slow! 
 ; default gestures
 
-; right now the hand that always has to be enabled is right hand. keep or change?
-
-; fix prevous
 ; change to global variables
 ; get it to evaluate correctly
 
-; get something to wrap handlers
+; get something to wrap mutliple handlers
 ; pass parameters to handlers 
 
 ; check naming on functions
 ; distinguish user functions
 
 ; should i remove list-append and speed functions if not in use?
+
+; z axis threshold in movement?
 
 ;----------; GLOBALS ;----------;
 
@@ -38,12 +30,26 @@
 (define y 1)
 (define z 2)
 
+
+;;; determines the user whose gestures are being evaluated
+(define user-id 1)
+
 ;;; the amount a joint must move before it is considered a movement
 (define movement-threshold 0.05)
 
 ;;; speed thresholds to determine if the joint is moving slowly or quickly
 (define fast-threshold .15)
 (define slow-threshold .01)
+
+;;; the amount of time that must pass before joint is registered as stop
+(define stop-threshold (* *second* 2))
+
+;;; the max amount of time that can occur between movements before they are considered 
+;;; out of sync. 
+(define simultaneous-threshold 100000)
+
+;;; how often track-gestures is called
+(define refresh-rate (* *second* .1))
 
 
 ;----------; KINECT ;----------;
@@ -81,7 +87,7 @@
 ;;;   calls oscdata-process, defined later
 (define io:osc:receive 
    (lambda (timestamp address . args)
-   (if (and (equal? (list-ref args 1) 1) (not DONE))
+   (if (and (equal? (list-ref args 1) user-id) (not DONE))
        (oscdata-process args))))
 
 
@@ -164,9 +170,9 @@
 ;;;   each gesture now has a 'NULL handler for oscjoint
 (define joint-add-to-gestures! 
    (lambda (oscjoint)
-      (map (lambda (gesture-pair)
-              (list-prepend! (cdr gesture-pair) (cons oscjoint 'NULL)))
-           gestures)))
+      (for-each (lambda (gesture-pair)
+                   (list-prepend! (cdr gesture-pair) (cons oscjoint 'NULL)))
+                gestures)))
 
 ;;; PROCEDURE:
 ;;;   joint-remove!
@@ -205,9 +211,9 @@
 ;;;   the handler for the oscjoint has been removed from each gesture
 (define joint-remove-from-gestures! 
    (lambda (oscjoint)
-      (map (lambda (gesture-pair)
-              (list-delete! (cdr gesture-pair) (assoc oscjoint (cdr gesture-pair))))
-           gestures)))
+      (for-each (lambda (gesture-pair)
+                   (list-delete! (cdr gesture-pair) (assoc oscjoint (cdr gesture-pair))))
+                gestures)))
 
 ;;; PROCEDURE:
 ;;;   enabled?
@@ -548,8 +554,8 @@
 ;;;   if no positions have been stored, returns 0
 (define get-current-pos
    (lambda (joint axis)
-      (car (vector-ref  (vector-ref (vector-ref joint axis) 2)
-                        (get-counter joint axis)))))
+      (car (vector-ref (vector-ref (vector-ref joint axis) 2)
+                       (get-counter joint axis)))))
 
 ;;; PROCEDURE:
 ;;;   get-previous-pos
@@ -699,7 +705,7 @@
 ;;;   if true, no new positions have been stored recently for the joint's axes
 (define axis-stopped? 
    (lambda (joint axis)
-      (>= (- (now) (get-current-time joint axis)) (* *second* 2))))
+      (>= (- (now) (get-current-time joint axis)) stop-threshold)))
 
 ;;; PROCEDURE:
 ;;;   joint-right?
@@ -1061,9 +1067,28 @@
       (and (gesture-joint-still left)
            (gesture-joint-still right))))
 
+;;; PROCEDURE:
+;;;   simultaneous? 
+;;; PARAMETERS:
+;;;   joint1, a joint vector
+;;;   axis1, an index to an axis vector of joint1
+;;;   joint2, a joint vector
+;;;   axis1, an index to an axis vector of joint2
+;;; PURPOSE: 
+;;;   determines whether the two axis of the joints are moving at the same time
+;;; PRODUCED: 
+;;;   boolean, whether the movements of the axes are simultaneous
+;;; PRECONDITIONS:
+;;;   simultaneous-threshold is the maximum amount of time that can occur between
+;;;   movements before they are considered out of sync
+;;; POSTCONDITIONS:
+;;;   returns true if the difference between the times of the last movements of 
+;;;   each of the joints is less than simultaneous-threshold
 (define simultaneous? 
    (lambda (joint1 axis1 joint2 axis2)
-      (<= (abs (- (get-current-time joint1 axis1) (get-current-time joint2 axis2))) 100000)))
+      (<= (abs (- (get-current-time joint1 axis1) 
+                  (get-current-time joint2 axis2)))
+          simultaneous-threshold)))
 
 
 ;----------; GESTURE SET UP ;----------;
@@ -1258,7 +1283,7 @@
    (lambda ()
       (when (not DONE)
             (gesture-evaluate-list)
-            (callback (+ (now) (* *second* .1)) 'track-gestures))))
+            (callback (+ (now) refresh-rate) 'track-gestures))))
 
 ;;; PROCEDURE:
 ;;;   gesture-evaluate-list 
@@ -1295,9 +1320,11 @@
 ;;;   gesture-evaluate-joint is called on every element in the handler list
 (define gesture-evaluate-pair
    (lambda (gesture-pair)
-      (map (lambda (handler-pair)
-              (gesture-evaluate-joint (car gesture-pair) (car handler-pair) (cdr handler-pair)))
-           (cdr gesture-pair))))
+      (for-each (lambda (handler-pair)
+                   (gesture-evaluate-joint (car gesture-pair) 
+                                           (car handler-pair) 
+                                           (cdr handler-pair)))
+                (cdr gesture-pair))))
 
 ;;; PROCEDURE:
 ;;;   gesture-evaluate-joint 
@@ -1497,6 +1524,22 @@
 ;----------; PROGRAMMER CONTROLS ;----------;
 
 ;;; PROCEDURE:
+;;;   set-user! 
+;;; PARAMETERS:
+;;;   new-id, an integer
+;;; PURPOSE: 
+;;;   sets the user-id to new-id
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   user-id is the id of the user whose gestures are being recognized
+;;; POSTCONDITIONS:
+;;;   user-id is now new-id
+(define set-user!
+   (lambda (new-id)
+      (set! user-id new-id)))
+
+;;; PROCEDURE:
 ;;;   movement-threshold-set!
 ;;; PARAMETERS:
 ;;;   new-threshold, an integer
@@ -1546,7 +1589,59 @@
       (set! slow-threshold new-threshold)))
 
 ;;; PROCEDURE:
-;;;   start! 
+;;;   stop-threshold-set! 
+;;; PARAMETERS:
+;;;   new-threshold, an integer
+;;; PURPOSE: 
+;;;   sets the stop-threshold to new-threshold
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   stop-threshold is the time it takes for joint to be registered as stopped
+;;;   new-threshold should be some fraction of *second* for best results
+;;; POSTCONDITIONS:
+;;;   stop-threshold is now new-threshold
+(define stop-threshold-set!
+   (lambda (new-threshold)
+      (set! stop-threshold new-threshold)))
+
+;;; PROCEDURE:
+;;;   simultaneous-threshold-set! 
+;;; PARAMETERS:
+;;;   new-threshold, an integer
+;;; PURPOSE: 
+;;;   sets the simultaneous-threshold to new-threshold
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   simultaneous-threshold is the max time between movements before those movements
+;;;   are considered out of sync 
+;;;   new-threshold should be some fraction of *second* for best results
+;;; POSTCONDITIONS:
+;;;   simultaneous-threshold is now new-threshold
+(define simultaneous-threshold-set! 
+   (lambda (new-threshold)
+      (set! simultaneous-threshold new-threshold)))
+
+;;; PROCEDURE:
+;;;   refresh-rate-set! 
+;;; PARAMETERS:
+;;;   new-rate, an integer
+;;; PURPOSE: 
+;;;   sets the refresh-rate to new-rate
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   refresh-rate determines how often track-gestures is called 
+;;;   new-rate should be some fraction of *second* for best results
+;;; POSTCONDITIONS:
+;;;   refresh-rate is now new-rate
+(define refresh-rate-set! 
+   (lambda (new-rate)
+      (set! refresh-rate new-rate)))
+
+;;; PROCEDURE:
+;;;   gestures-start! 
 ;;; PARAMETERS:
 ;;;   NULL
 ;;; PURPOSE: 
@@ -1557,13 +1652,13 @@
 ;;;   DONE is currently #t
 ;;; POSTCONDITIONS:
 ;;;   DONE is now #f and gestures are being processed
-(define start!
+(define gestures-start!
    (lambda ()
       (set! DONE #f)
       (track-gestures)))
 
 ;;; PROCEDURE:
-;;;   stop! 
+;;;   gestures-stop! 
 ;;; PARAMETERS:
 ;;;   NULL
 ;;; PURPOSE: 
@@ -1574,7 +1669,7 @@
 ;;;   DONE is currently #f
 ;;; POSTCONDITIONS:
 ;;;   DONE is now #t and gestures are not being processed
-(define stop! 
+(define gestures-stop! 
    (lambda ()
       (set! DONE #t)))
 

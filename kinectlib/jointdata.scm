@@ -7,9 +7,6 @@
 ; fast and slow! 
 ; default gestures
 
-; change to global variables
-; get it to evaluate correctly
-
 ; get something to wrap mutliple handlers
 ; pass parameters to handlers 
 
@@ -980,92 +977,122 @@
 
 (define gesture-both-hands-right
    (lambda ()
-      (and (gesture-joint-right left)
-           (gesture-joint-right right)
-           (simultaneous? left x right x))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right (oscstring->joint left))
+              (gesture-joint-right (oscstring->joint right))
+              (simultaneous? left x right x)))))
 
 (define gesture-both-hands-left
    (lambda ()
-      (and (gesture-joint-left left)
-           (gesture-joint-left right)
-           (simultaneous? left x right x))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-left left)
+              (gesture-joint-left right)
+              (simultaneous? left x right x)))))
 
 (define gesture-both-hands-in
    (lambda ()
-      (and (gesture-joint-right left)
-           (gesture-joint-left right)
-           (simultaneous? left x right x))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right left)
+              (gesture-joint-left right)
+              (simultaneous? left x right x)))))
 
 (define gesture-both-hands-away
    (lambda ()
-      (and (gesture-joint-right right)
-           (gesture-joint-left left)
-           (simultaneous? left x right x))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right right)
+              (gesture-joint-left left)
+              (simultaneous? left x right x)))))
 
 (define gesture-both-hands-up
    (lambda ()
-      (and (gesture-joint-up left)
-           (gesture-joint-up right)
-           (simultaneous? left y right y)))) 
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-up left)
+              (gesture-joint-up right)
+              (simultaneous? left y right y)))))
 
 (define gesture-both-hands-down
    (lambda ()
-      (and (gesture-joint-down left)
-           (gesture-joint-down right)
-           (simultaneous? left y right y))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-down left)
+              (gesture-joint-down right)
+              (simultaneous? left y right y)))))
 
 (define gesture-right-hand-up-left-hand-down
    (lambda ()
-      (and (gesture-joint-up right)
-           (gesture-joint-down left)
-           (simultaneous? left y right y))))      
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-up right)
+              (gesture-joint-down left)
+              (simultaneous? left y right y)))))      
 
 (define gesture-right-hand-down-left-hand-up
    (lambda ()
-      (and (gesture-joint-up left)
-           (gesture-joint-down left)
-           (simultaneous? left y right y))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-up left)
+              (gesture-joint-down left)
+              (simultaneous? left y right y)))))
 
 (define gesture-both-hands-forward
    (lambda ()
-      (and (gesture-joint-forward left)
-           (gesture-joint-forward right)
-           (simultaneous? left z right z))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-forward left)
+              (gesture-joint-forward right)
+              (simultaneous? left z right z)))))
 
 (define gesture-both-hands-backward
    (lambda ()
-      (and (gesture-joint-backward left)
-           (gesture-joint-backward right)
-           (simultaneous? left z right z))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-backward left)
+              (gesture-joint-backward right)
+              (simultaneous? left z right z)))))
 
 (define gesture-both-hands-up-in
    (lambda ()
-      (and (gesture-joint-right-up left)
-           (gesture-joint-left-up right)
-           (simultaneous? left y right y))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right-up left)
+              (gesture-joint-left-up right)
+              (simultaneous? left y right y)))))
 
 (define gesture-both-hands-down-out
    (lambda ()
-      (and (gesture-joint-left-down left)
-           (gesture-joint-right-down right)
-           (simultaneous? left y right y))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-left-down left)
+              (gesture-joint-right-down right)
+              (simultaneous? left y right y)))))
 
 (define gesture-both-hands-up-out
    (lambda ()
-      (and (gesture-joint-right-up right)
-           (gesture-joint-left-up left)
-           (simultaneous? left y right y))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right-up right)
+              (gesture-joint-left-up left)
+              (simultaneous? left y right y)))))
 
 (define gesture-both-hands-down-in 
    (lambda ()
-      (and (gesture-joint-right-down left)
-           (gesture-joint-left-down right)
-           (simultaneous? left y right y))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right-down left)
+              (gesture-joint-left-down right)
+              (simultaneous? left y right y)))))
 
 (define gesture-both-hands-still 
    (lambda ()
-      (and (gesture-joint-still left)
-           (gesture-joint-still right))))
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-still left)
+              (gesture-joint-still right)))))
 
 ;;; PROCEDURE:
 ;;;   simultaneous? 
@@ -1240,8 +1267,6 @@
    (lambda ()
       (print 'hand-is-moving-left)))
 
-; make sure evaluate-all-gestures works!
-; gesture-evaluate-list adds to ignored for no reason! 
 
 ;----------; GESTURE TRACKING ;----------;
 
@@ -1300,7 +1325,7 @@
 ;;;   the gestures list
 (define gesture-evaluate-list
    (lambda ()
-      (set! ignored '(NULL))
+      (set! ignored (list 'NULL))
       (if (and (enabled? "l_hand") (enabled? "r_hand"))
           (gesture-evaluate-two-handed-gestures two-handed-gestures))
       (for-each gesture-evaluate-pair gestures)))
@@ -1367,7 +1392,6 @@
 (define gesture-evaluate-handler 
    (lambda (gesture joint handler)      
       (handler)
-      (set! counter (+ counter 1))
       (if (multidirectional? gesture)
           (list-prepend! ignored joint))))
 
@@ -1413,28 +1437,8 @@
              ((cdr gesture-pair))
              (list-prepend! ignored "l_hand")
              (list-prepend! ignored "r_hand")
-             (set! counter (+ counter 1))
              #t)
             (else #f))))
-
-;;; TESTS ;;;
-
-(define counter 0)
-
-(gesture-evaluate-two-handed-gesture-pair (assoc gesture-both-hands-still two-handed-gestures))
-
-(gesture-evaluate-two-handed-gestures two-handed-gestures)
-(print counter)
-
-(gesture-evaluate-two-handed-gestures two-handed-gestures)
-
-(gesture-evaluate-list)
-
-(print ignored)
-
-(for-each gesture-evaluate-pair gestures)
-
-(gesture-disable! gesture-both-hands-still)
 
 
 ;----------; HANDLER MANAGEMENT ;---------;
@@ -1518,7 +1522,9 @@
 ;;;   the gesture will no longer be evaluated
 (define gesture-disable! 
    (lambda (gesture . oscstring)
-      (gesture-change-handler! gesture 'NULL (car oscstring))))
+      (if (null? oscstring)
+          (gesture-change-handler! gesture 'NULL)
+          (gesture-change-handler! gesture 'NULL oscstring))))
 
 
 ;----------; PROGRAMMER CONTROLS ;----------;

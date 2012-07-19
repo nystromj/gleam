@@ -1207,7 +1207,7 @@
    (lambda (gesture function . oscstring)
       (if (null? oscstring)
           (gesture-two-handed-change-handler! gesture function)
-          (gesture-simple-change-handler! gesture function oscstring))))
+          (gesture-simple-change-handler! gesture function (car oscstring)))))
 
 ; seems to work, but not within call to gesture-change-handler!
 (define gesture-simple-change-handler! 
@@ -1230,19 +1230,8 @@
    (lambda (gesture . oscstring)
       (if (null? oscstring)
           (gesture-change-handler! gesture 'NULL)
-          (gesture-change-handler! gesture 'NULL oscstring))))
+          (gesture-change-handler! gesture 'NULL (car oscstring)))))
 
-;;; TESTS ;;;;
-
-(length (cdr (assoc gesture-joint-still gestures)))
-
-(gesture-simple-change-handler! gesture-joint-still print-up "r_hand")
-(gesture-simple-change-handler! gesture-joint-still print-down "l_hand")
-(gesture-simple-change-handler! gesture-joint-still print-forward "l_elbow")
-;(gesture-change-handler! gesture-joint-still print-up "l_hand")
-(gesture-evaluate-pair (assoc gesture-joint-still gestures))
-
-(print ignored)
 
 ;----------; PROGRAMMER CONTROLS ;----------;
 

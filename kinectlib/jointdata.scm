@@ -1,22 +1,3 @@
-; make a wiki?
-
-; does storage work?
-
-; change oscstring to oscjoint?
-
-; fast and slow! 
-; default gestures
-
-; get something to wrap mutliple handlers
-; pass parameters to handlers 
-
-; check naming on functions
-; distinguish user functions
-
-; should i remove list-append and speed functions if not in use?
-
-; z axis threshold in movement?
-
 ;----------; GLOBALS ;----------;
 
 ;;; determines whether gestures should be detected
@@ -26,7 +7,6 @@
 (define x 0)
 (define y 1)
 (define z 2)
-
 
 ;;; determines the user whose gestures are being evaluated
 (define user-id 1)
@@ -90,12 +70,6 @@
 
 ;----------; JOINTS ;----------;
 
-
-;;; list of enabled joints -> left hand and right hand are default
-(define joints
-   (list (cons "l_hand" (make-joint))
-         (cons "r_hand" (make-joint))))
-
 ;;; PROCEDURE:
 ;;;   make-joint
 ;;; PARAMETERS:
@@ -132,6 +106,11 @@
       (vector 0
               0
               (make-vector 100 (cons 0 0)))))
+
+;;; list of enabled joints -> left hand and right hand are default
+(define joints
+   (list (cons "l_hand" (make-joint))
+         (cons "r_hand" (make-joint))))
 
 ;;; PROCEDURE:
 ;;;   joint-add! 
@@ -897,7 +876,7 @@
    (lambda (joint)
       (and (joint-down? joint)
            (joint-left? joint)
-           (simultaenous? joint x joint y))))
+           (simultaneous? joint x joint y))))
 
 (define gesture-joint-left-forward
    (lambda (joint)
@@ -979,8 +958,8 @@
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
             (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-right (oscstring->joint left))
-              (gesture-joint-right (oscstring->joint right))
+         (and (gesture-joint-right left)
+              (gesture-joint-right right)
               (simultaneous? left x right x)))))
 
 (define gesture-both-hands-left
@@ -1137,6 +1116,9 @@
          (cons gesture-both-hands-up-out 'NULL)
          (cons gesture-both-hands-down-in 'NULL)
          (cons gesture-both-hands-still 'NULL)))
+
+(gesture-evaluate-two-handed-gesture-pair (assoc gesture-right-hand-down-left-hand-up two-handed-gestures))
+(two-handed? gesture-both-hands-right)
 
 ;;; PROCEDURE:
 ;;;   two-handed? 
@@ -1330,6 +1312,13 @@
           (gesture-evaluate-two-handed-gestures two-handed-gestures))
       (for-each gesture-evaluate-pair gestures)))
 
+(gesture-change-handler! gesture-both-hands-still print-down)
+(gesture-evaluate-two-handed-gestures two-handed-gestures)
+(print ignored)
+(gesture-evaluate-list)
+(gestures-stop!)
+(gestures-start!)
+
 ;;; PROCEDURE:
 ;;;   gesture-evaluate-pair 
 ;;; PARAMETERS:
@@ -1345,11 +1334,11 @@
 ;;;   gesture-evaluate-joint is called on every element in the handler list
 (define gesture-evaluate-pair
    (lambda (gesture-pair)
-      (for-each (lambda (handler-pair)
-                   (gesture-evaluate-joint (car gesture-pair) 
-                                           (car handler-pair) 
-                                           (cdr handler-pair)))
-                (cdr gesture-pair))))
+      (map (lambda (handler-pair)
+              (gesture-evaluate-joint (car gesture-pair) 
+                                      (car handler-pair) 
+                                      (cdr handler-pair)))
+           (cdr gesture-pair))))
 
 ;;; PROCEDURE:
 ;;;   gesture-evaluate-joint 
@@ -1433,13 +1422,31 @@
 ;;;   was executed and both hands are added to the ignored list.
 (define gesture-evaluate-two-handed-gesture-pair
    (lambda (gesture-pair)
-      (cond ((and ((car gesture-pair)) (not (equal? (cdr gesture-pair) 'NULL)))
+      (cond ((and ((car gesture-pair)) 
+                  (not (equal? (cdr gesture-pair) 'NULL)))
              ((cdr gesture-pair))
              (list-prepend! ignored "l_hand")
              (list-prepend! ignored "r_hand")
              #t)
             (else #f))))
 
+(define fun-list (list print-up print-forward print-still))
+((list-ref fun-list 1))
+
+(map gesture-evaluate-two-handed-gesture-pair
+     two-handed-gestures)
+
+(gesture-evaluate-list)
+((car (cons gesture-both-hands-still print-still)))
+(gesture-disable! gesture-both-hands-still)
+(print (assoc gesture-both-hands-still two-handed-gestures))
+(gesture-change-handler! gesture-both-hands-still print-still)
+(gesture-evaluate-two-handed-gesture-pair (assoc gesture-both-hands-still two-handed-gestures))
+(print ignored)
+(gesture-evaluate-two-handed-gestures two-handed-gestures)
+(for-each gesture-evaluate-pair gestures)
+(gesture-two-handed-change-handler! gesture-both-hands-still print-forward)
+(gestures-stop!)
 
 ;----------; HANDLER MANAGEMENT ;---------;
 
@@ -1463,6 +1470,15 @@
           (gesture-two-handed-change-handler! gesture function)
           (gesture-simple-change-handler! gesture function (car oscjoint)))))
 
+(gesture-change-handler! gesture-both-hands-up print-down)
+(gesture-change-handler! gesture-joint-up print-forward "l_hand")
+(gesture-change-handler! gesture-both-hands-still print-still)
+(gesture-disable! gesture-both-hands-still)
+(gestures-stop!)
+(kinect-start! 7110)
+(print (oscstring->joint "l_hand"))
+
+
 ;;; PROCEDURE:
 ;;;   gesture-simple-change-handler!
 ;;; PARAMETERS:
@@ -1479,10 +1495,10 @@
 ;;;   changes the gesture's handler for the joint to the given function
 ;;;   returns an error if the joint is not enabled
 (define gesture-simple-change-handler! 
-   (lambda (gesture function oscstring)
+   (lambda (gesture function oscjoint)
       (let ((pair (assoc gesture gestures)))
-         (if (and pair (enabled? oscstring))
-             (set-cdr! (assoc oscstring (cdr pair)) function)
+         (if (and pair (enabled? oscjoint))
+             (set-cdr! (assoc oscjoint (cdr pair)) function)
              (error "gesture not found")))))
 
 ;;; PROCEDURE:
@@ -1521,10 +1537,10 @@
 ;;;   calls gesture-change-handler! with 'NULL as an argument
 ;;;   the gesture will no longer be evaluated
 (define gesture-disable! 
-   (lambda (gesture . oscstring)
-      (if (null? oscstring)
+   (lambda (gesture . oscjoint)
+      (if (null? oscjoint)
           (gesture-change-handler! gesture 'NULL)
-          (gesture-change-handler! gesture 'NULL oscstring))))
+          (gesture-change-handler! gesture 'NULL oscjoint))))
 
 
 ;----------; PROGRAMMER CONTROLS ;----------;
@@ -1678,6 +1694,7 @@
 (define gestures-stop! 
    (lambda ()
       (set! DONE #t)))
+
 
 ;----------; LIST HELPERS ;----------;
 

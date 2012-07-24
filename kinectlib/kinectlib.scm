@@ -193,7 +193,7 @@
 ;;;   ~axis-get-counter
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   returns the counter index for the axis vector
 ;;; PRODUCED: 
@@ -211,7 +211,7 @@
 ;;;   ~axis-set-counter!
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;;   counter, an int
 ;;; PURPOSE: 
 ;;;   sets axis counter to counter
@@ -230,7 +230,7 @@
 ;;;   ~axis-increment-counter!
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   increments axis counter by one
 ;;; PRODUCED: 
@@ -251,7 +251,7 @@
 ;;;   axis-get-current-pos
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   returns the last stored position for the axis
 ;;; PRODUCED: 
@@ -269,7 +269,7 @@
 ;;;   axis-get-current-time
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   returns the time that the last value was stored
 ;;; PRODUCED: 
@@ -288,7 +288,7 @@
 ;;;   ~axis-get-previous-counter
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   determines the index of the previous position stored
 ;;; PRODUCED: 
@@ -307,7 +307,7 @@
 ;;;   axis-get-previous-pos
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   returns the position of the joint before the last stored position
 ;;; PRODUCED: 
@@ -325,7 +325,7 @@
 ;;;   axis-get-direction
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector   
+;;;   axis, index to one of joint's axis vectors   
 ;;; PURPOSE: 
 ;;;   returns the direction stored for the given joint axis
 ;;; PRODUCED: 
@@ -342,7 +342,7 @@
 ;;;   ~axis-set-direction!
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;;   direction, an int
 ;;; PURPOSE: 
 ;;;   stores the given direction to the axis vector
@@ -363,7 +363,7 @@
 ;;;   ~axis-calculate-direction
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector   
+;;;   axis, index to one of joint's axis vectors   
 ;;; PURPOSE: 
 ;;;   calculates the direction between the 2 most recent saved points
 ;;; PRODUCED: 
@@ -401,7 +401,7 @@
 ;;;   ~axis-direction-changed?
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector   
+;;;   axis, index to one of joint's axis vectors   
 ;;; PURPOSE: 
 ;;;   determines whether the current direction matches the stored direction
 ;;; PRODUCED: 
@@ -421,7 +421,7 @@
 ;;;   ~axis-moved?
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector
+;;;   axis, index to one of joint's axis vectors
 ;;;   new-pos, the position the joint is currently at
 ;;; PURPOSE: 
 ;;;   determines whether the joint has moved from its previous stored point
@@ -464,7 +464,7 @@
 ;;;   ~axis-stopped?
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, index to the axis vector for the joint
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   determines whether the joint axis has stored any new positions in time defined by 
 ;;;   still-threshold
@@ -485,7 +485,7 @@
 ;;;   ~axis-update! 
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, index to the axis vector for the joint
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   checks to see if the joint has stopped moving along the axis
 ;;;   changes the joint's direction if appropriate
@@ -505,8 +505,8 @@
 ;;;   ~axis-store-pos!
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, index to the axis vector for the joint
-;;;   new-data, the new position
+;;;   axis, index to one of joint's axis vectors
+;;;   new-pos, the new position
 ;;; PURPOSE: 
 ;;;   stores the given position at the appropriate point in the joint's axis vector
 ;;; PRODUCED: 
@@ -515,15 +515,15 @@
 ;;;   procedure should not be called directly by user
 ;;; POSTCONDITIONS:
 ;;;   the new position is now stored at the appropriate point in the axis vector
-;;;   new-data is now attainable by axis-get-current-pos
+;;;   new-pos is now attainable by axis-get-current-pos
 ;;;   the new position is paired with the time it was stored
 ;;;   sets a new direction for the axis if direction has changed
 (define ~axis-store-pos! 
-   (lambda (joint axis new-data)
+   (lambda (joint axis new-pos)
       (~axis-increment-counter! joint axis)      
       (vector-set! (vector-ref (vector-ref joint axis) 2)
                    (~axis-get-counter joint axis) 
-                   (cons (* 100 new-data) (now)))
+                   (cons (* 100 new-pos) (now)))
       (if (~axis-direction-changed? joint axis)
           (~axis-set-direction! joint axis (~axis-calculate-direction joint axis)))))
 
@@ -531,8 +531,8 @@
 ;;;  ~oscdata-process-axis-coordinates
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, index to the axis vector for the joint
-;;;   coord, the position the joint is currently at
+;;;   axis, index to one of joint's axis vectors
+;;;   new-pos, the position the joint is currently at
 ;;; PURPOSE: 
 ;;;   determines whether to store the new coordinate
 ;;; PRODUCED: 
@@ -544,8 +544,8 @@
 ;;;   if the joint has not moved, calls ~axis-update!
 (define ~oscdata-process-axis-coordinates
    (lambda (joint axis coord)
-      (if (~axis-moved? joint axis coord)
-          (~axis-store-pos! joint axis coord)
+      (if (~axis-moved? joint axis new-pos)
+          (~axis-store-pos! joint axis new-pos)
           (~axis-update! joint axis))))
 
 ;;; PROCEDURE:
@@ -617,7 +617,7 @@
 ;;;   axis-get-previous-time
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, index to the axis vector for the joint
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   returns the time that the value before the current value was stored
 ;;; PRODUCED: 
@@ -636,7 +636,7 @@
 ;;;   axis-calculate-speed
 ;;; PARAMETERS:
 ;;;   joint, the joint vector
-;;;   axis, the x y or z vector   
+;;;   axis, index to one of joint's axis vectors   
 ;;; PURPOSE: 
 ;;;   calculates the speed between the 2 most recently saved points
 ;;; PRODUCED: 
@@ -654,7 +654,7 @@
 ;;;   axis-movement-fast?
 ;;; PARAMETERS:
 ;;;   joint, a joint vector
-;;;   axis, the x y or z axis vector 
+;;;   axis, index to one of joint's axis vectors 
 ;;; PURPOSE: 
 ;;;   checks the speed of the axis movement against the fast-threshold 
 ;;; PRODUCED: 
@@ -671,7 +671,7 @@
 ;;;   axis-movement-slow?
 ;;; PARAMETERS:
 ;;;   joint, a joint vector
-;;;   axis, the x y or z axis vector
+;;;   axis, index to one of joint's axis vectors
 ;;; PURPOSE: 
 ;;;   checks the speed of the axis movement against the slow-threshold 
 ;;; PRODUCED: 
@@ -858,74 +858,74 @@
 
 (define gesture-joint-right-up
    (lambda (joint)
-      (and (~joint-up? joint)
-           (~joint-right? joint)
+      (and (gesture-joint-up joint)
+           (gesture-joint-right joint)
            (~simultaneous? joint x joint y))))
 
 (define gesture-joint-right-down
    (lambda (joint)
-      (and (~joint-down? joint)
-           (~joint-right? joint)
+      (and (gesture-joint-down joint)
+           (gesture-joint-right joint)
            (~simultaneous? joint x joint y))))
 
 (define gesture-joint-right-forward
    (lambda (joint)
-      (and (~joint-forward? joint)
-           (~joint-right? joint)
+      (and (gesture-joint-forward joint)
+           (gesture-joint-right joint)
            (~simultaneous? joint x joint z))))
 
 (define gesture-joint-right-backward
    (lambda (joint)
-      (and (~joint-backward? joint)
-           (~joint-right? joint)
+      (and (gesture-joint-backward joint)
+           (gesture-joint-right joint)
            (~simultaneous? joint x joint z))))
 
 (define gesture-joint-left-up
    (lambda (joint)
-      (and (~joint-up? joint)
-           (~joint-left? joint)
+      (and (gesture-joint-up joint)
+           (gesture-joint-left joint)
            (~simultaneous? joint x joint y))))
 
 (define gesture-joint-left-down
    (lambda (joint)
-      (and (~joint-down? joint)
-           (~joint-left? joint)
+      (and (gesture-joint-down joint)
+           (gesture-joint-left joint)
            (~simultaneous? joint x joint y))))
 
 (define gesture-joint-left-forward
    (lambda (joint)
-      (and (~joint-forward? joint)
-           (~joint-left? joint)
+      (and (gesture-joint-forward joint)
+           (gesture-joint-left joint)
            (~simultaneous? joint x joint z))))
 
 (define gesture-joint-left-backward
    (lambda (joint)
-      (and (~joint-backward? joint)
-           (~joint-left? joint)
+      (and (gesture-joint-backward joint)
+           (gesture-joint-left joint)
            (~simultaneous? joint x joint z))))
 
 (define gesture-joint-up-forward
    (lambda (joint)
-      (and (~joint-forward? joint)
-           (~joint-up? joint)
+      (and (gesture-joint-forward joint)
+           (gesture-joint-up joint)
            (~simultaneous? joint y joint z))))
 
 (define gesture-joint-up-backward
    (lambda (joint)
-      (and (~joint-backward? joint)
-           (~joint-up? joint)
+      (and (gesture-joint-backward joint)
+           (gesture-joint-up joint)
            (~simultaneous? joint y joint z))))
 
 (define gesture-joint-down-forward 
    (lambda (joint)
-      (and (~joint-forward? joint)
-           (~joint-down? joint)
+      (and (gesture-joint-forward joint)
+           (gesture-joint-down joint)
            (~simultaneous? joint y joint z))))
 
 (define gesture-joint-down-backward
    (lambda (joint)
-      (and (~joint-backward? joint)
-           (~joint-down? joint)
+      (and (gesture-joint-backward joint)
+           (gesture-joint-down joint)
            (~simultaneous? joint y joint z))))
 
 (define gesture-joint-right-up-forward
@@ -1785,6 +1785,42 @@
 
 
 ;----------; PROGRAMMER CONTROLS ;----------;
+
+;;; PROCEDURE:
+;;;   context-print-status
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   prints the current context of the environment
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   the current settings are printed as a notification to the log window.
+(define context-print-status
+   (lambda ()
+      (let ((print-note (lambda (str . args)
+                           (if (null? args)
+                               (print-notification (string->symbol str))
+                               (print-notification (string->symbol str) (car args))))))
+         (print-note "---------------------------------------------------------")
+         (print-note "|   CURRENT SETTINGS   |")
+         (print-note "------------------------")
+         (if DONE
+             (print-note "  Gestures are not being tracked.")
+             (print-note "  Gestures are currently being tracked."))
+         (if PARAMETERS
+             (print-note "  Joint information is currently being sent to handlers.")
+             (print-note "  Joint information is not being sent to parameters."))
+         (print-note "  Currently tracking user" user-id)
+         (print-note "  Movement-threshold is:" movement-threshold)
+         (print-note "  Fast-threshold is:" fast-threshold)
+         (print-note "  Slow-threshold is:" slow-threshold)
+         (print-note "  Still-threshold is:" still-threshold)
+         (print-note "  Simultaneous-treshold is:" simultaneous-threshold)
+         (print-note "  Refresh-rate is:" refresh-rate)
+         (print-note "---------------------------------------------------------"))))
 
 ;;; PROCEDURE:
 ;;;   context-toggle-parameter-passing! 

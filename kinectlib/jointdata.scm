@@ -1323,7 +1323,7 @@
              #f)))
 
 ;;; appends the list of joint gestures together and adds default handlers
-(define gestures (map (lambda (elt)
+(define single-joint-gestures (map (lambda (elt)
                          (cons elt (list (cons "l_hand" 'NULL)
                                          (cons "r_hand" 'NULL))))
                       (append multidirectional-gestures simple-gestures)))
@@ -1347,7 +1347,7 @@
    (lambda (oscjoint)
       (for-each (lambda (gesture-pair)
                    (~list-prepend! (cdr gesture-pair) (cons oscjoint 'NULL)))
-                gestures)))
+                single-joint-gestures)))
 
 ;;; PROCEDURE:
 ;;;   joint-add! 
@@ -1385,7 +1385,7 @@
    (lambda (oscjoint)
       (for-each (lambda (gesture-pair)
                    (~list-delete! (cdr gesture-pair) (assoc oscjoint (cdr gesture-pair))))                                
-                gestures)))
+                single-joint-gestures)))
 
 ;;; PROCEDURE:
 ;;;   joint-remove!
@@ -1518,7 +1518,7 @@
             (else (~gesture-evaluate-two-handed-gestures (cdr lst))))))
 
 ;;; PROCEDURE:
-;;;   ~gesture-evaluate-handler 
+;;;   ~gesture-evaluate-single-joint-handler 
 ;;; PARAMETERS:
 ;;;   gesture, a gseture function
 ;;;   joint, a joint vecor
@@ -1529,17 +1529,17 @@
 ;;; PRODUCED: 
 ;;;   NULL, called for side effects
 ;;; PRECONDITIONS:
-;;;   should only be called by ~gesture-evaluate-joint
+;;;   should only be called by ~gesture-evaluate-single-joint
 ;;; POSTCONDITIONS:
 ;;;   if gesture was multidirectional, joint is now ignored
-(define ~gesture-evaluate-handler 
+(define ~gesture-evaluate-single-joint-handler 
    (lambda (gesture joint handler)      
       (handler)
       (if (multidirectional? gesture)
           (~list-prepend! ignored joint))))
 
 ;;; PROCEDURE:
-;;;   ~gesture-evaluate-joint 
+;;;   ~gesture-evaluate-single-joint 
 ;;; PARAMETERS:
 ;;;   gesture, a gesture function
 ;;;   joint, a joint vector
@@ -1549,24 +1549,24 @@
 ;;; PRODUCED: 
 ;;;   NULL, called for side effects
 ;;; PRECONDITIONS:
-;;;   should be called only by ~gesture-evaluate-pair
+;;;   should be called only by ~gesture-evaluate-single-joint-pair
 ;;;   in order for handler to evaluate, joint should not be ignored and the handler
 ;;;   should not be null.
 ;;; POSTCONDITIONS:
 ;;;   if the preconditions are met and the gesture is true for the joint, calls
-;;;   ~gesture-evaluate-handler
-(define ~gesture-evaluate-joint
+;;;   ~gesture-evaluate-single-joint-handler
+(define ~gesture-evaluate-single-joint
    (lambda (gesture joint handler)
       (if (and (not (~ignored? joint)) (not (equal? handler 'NULL)))
           (if (gesture (oscstring->joint joint))
-              (~gesture-evaluate-handler gesture joint handler)))))
+              (~gesture-evaluate-single-joint-handler gesture joint handler)))))
 
 ;;; PROCEDURE:
-;;;   ~gesture-evaluate-pair 
+;;;   ~gesture-evaluate-single-joint-pair 
 ;;; PARAMETERS:
 ;;;   gesture-pair, a cons cell
 ;;; PURPOSE: 
-;;;   calls ~gesture-evaluate-joint for each joint in the handler list
+;;;   calls ~gesture-evaluate-single-joint for each joint in the handler list
 ;;; PRODUCED: 
 ;;;   NULL, called for side effects
 ;;; PRECONDITIONS:
@@ -1574,11 +1574,11 @@
 ;;;   gesture-pair is a cons cell whose car is a gesture function and whose cdr 
 ;;;   is the handler list for that gesture
 ;;; POSTCONDITIONS:
-;;;   ~gesture-evaluate-joint is called on every element in the handler list
-(define ~gesture-evaluate-pair
+;;;   ~gesture-evaluate-single-joint is called on every element in the handler list
+(define ~gesture-evaluate-single-joint-pair
    (lambda (gesture-pair)
-      (map (lambda (handler-pair)
-              (~gesture-evaluate-joint (car gesture-pair) 
+      (for-each (lambda (handler-pair)
+              (~gesture-evaluate-single-joint (car gesture-pair) 
                                       (car handler-pair) 
                                       (cdr handler-pair)))
            (cdr gesture-pair))))
@@ -1601,7 +1601,7 @@
       (set! ignored (list 'NULL))
       (if (and (enabled? "l_hand") (enabled? "r_hand"))
           (~gesture-evaluate-two-handed-gestures two-handed-gestures))
-      (for-each ~gesture-evaluate-pair gestures)))
+      (for-each ~gesture-evaluate-single-joint-pair single-joint-gestures)))
 
 ;;; PROCEDURE:
 ;;;   ~track-gestures 
@@ -1624,7 +1624,6 @@
 
 
 ;----------; HANDLER MANAGEMENT ;---------;
-
 
 ;;; PROCEDURE:
 ;;;   ~gesture-two-handed-change-handler!
@@ -1664,7 +1663,7 @@
 ;;;   returns an error if the joint is not enabled
 (define ~gesture-single-joint-change-handler! 
    (lambda (gesture function oscjoint)
-      (let ((pair (assoc gesture gestures)))
+      (let ((pair (assoc gesture single-joint-gestures)))
          (if (and pair (enabled? oscjoint))
              (set-cdr! (assoc oscjoint (cdr pair)) function)
              (error "gesture not found")))))
@@ -1708,6 +1707,66 @@
       (if (null? oscjoint)
           (gesture-change-handler! gesture 'NULL)
           (gesture-change-handler! gesture 'NULL oscjoint))))
+
+;;; PROCEDURE:
+;;;   gesture-disable-two-handed-gestures! 
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   sets the handler for all two-handed-gestures to 'NULL
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   only changes gestures that had non-null handlers
+;;;   no two-handed gestures will be active until handlers are changed from 'NULL
+(define gesture-disable-two-handed-gestures!
+   (lambda ()
+      (for-each (lambda (gesture-pair)
+                   (if (not (equal? (cdr gesture-pair) 'NULL))
+                       (set-cdr! gesture-pair 'NULL)))
+                two-handed-gestures)))
+
+;;; PROCEDURE:
+;;;   gesture-disable-single-joint-gestures! 
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   sets the handler for all single-joint-gestures to 'NULL
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   only changes gestures that had non-null handlers
+;;;   no single-joint gestures will be active until handlers are changed from 'NULL
+(define gesture-disable-single-joint-gestures!
+   (lambda ()
+      (for-each (lambda (gesture-pair)
+                   (for-each (lambda (handler-pair)
+                                (if (not (equal? (cdr handler-pair) 'NULL))
+                                    (set-cdr! handler-pair 'NULL)))
+                             (cdr gesture-pair)))
+                single-joint-gestures)))
+
+;;; PROCEDURE:
+;;;   gesture-disable-all! 
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   sets the handler for all gestures to 'NULL
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   NULL
+;;; POSTCONDITIONS:
+;;;   only changes gestures that had non-null handlers
+;;;   no gestures will be active until handlers are changed from 'NULL
+(define gesture-disable-all! 
+   (lambda ()
+      (gesture-disable-two-handed-gestures!)
+      (gesture-disable-single-joint-gestures!)))
 
 
 ;----------; PROGRAMMER CONTROLS ;----------;

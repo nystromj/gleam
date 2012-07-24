@@ -5,6 +5,9 @@
 ;;; determines whether gestures should be detected
 (define DONE #t)
 
+;;; determines whether joint information should be passed to handlers
+(define PARAMETERS #f)
+
 ;;; binds axes with index variables for referencing axis vectors
 (define x 0)
 (define y 1)
@@ -21,7 +24,7 @@
 (define slow-threshold .01)
 
 ;;; the amount of time that must pass before joint is registered as stop
-(define still-threshold (* *second* 2))
+(define still-threshold (* *second* 1.5))
 
 ;;; the max amount of time that can occur between movements before they are considered 
 ;;; out of sync. 
@@ -181,8 +184,8 @@
       (let ((joint-pair (assoc oscstring joints)))
          (if joint-pair
              (cdr joint-pair)
-             (error "osc string not found")))))
-
+             (print-error 'oscstring->joint: oscstring 
+                          (string->symbol "is not an enabled joint."))))))
 
 ;----------; JOINT VECTOR GETTERS AND SETTERS ;----------;
 
@@ -1365,9 +1368,10 @@
 (define joint-add! 
    (lambda (oscjoint)
       (if (enabled? oscjoint)
-          (error "joint has already been enabled")
+          (print-notification 'joint-add!: oscjoint (string->symbol "has already been enabled."))
           (begin (~list-prepend! joints (cons oscjoint (~make-joint)))
-                 (~joint-add-to-gestures! oscjoint)))))
+                 (~joint-add-to-gestures! oscjoint)
+                 (print-notification 'joint-add!: oscjoint (string->symbol "is now enabled."))))))
 
 ;;; PROCEDURE:
 ;;;   ~joint-remove-from-gestures!
@@ -1404,18 +1408,23 @@
 (define joint-remove!
    (lambda (oscjoint)
       (if (cond ((not (enabled? oscjoint))
-                 (error "joint is not currently enabled"))
+                 (print-notification 'joint-remove!: oscjoint 
+                                     (string->symbol "is not currently enabled.")))
                 ((equal? oscjoint (car (list-ref joints (- (length joints) 1))))
-                 (error "must have at least one joint activated"))
+                 (print-error 'joint-remove!: 
+                              (string->symbol "cannot remove last joint in list.")))
                 (else (~list-delete! joints (assoc oscjoint joints))
-                      (~joint-remove-from-gestures! oscjoint))))))
-         
+                      (~joint-remove-from-gestures! oscjoint)
+                      (print-notification 'joint-remove!: oscjoint
+                                          (string->symbol "is no longer enabled.")))))))
 
 ;;; TEST HANDLERS
 
 (define print-left
-   (lambda ()
-      (print 'left)))
+   (lambda vals
+      (if (not (null? vals))
+          (print vals 'is 'moving 'left)
+          (print 'left))))
 
 (define print-right
    (lambda ()
@@ -1490,7 +1499,9 @@
    (lambda (gesture-pair)
       (cond ((and ((car gesture-pair)) 
                   (not (equal? (cdr gesture-pair) 'NULL)))
-             ((cdr gesture-pair))
+             (if PARAMETERS
+                 ((cdr gesture-pair) (list "r_hand" "l_hand"))
+                 ((cdr gesture-pair)))
              (~list-prepend! ignored "l_hand")
              (~list-prepend! ignored "r_hand")
              #t)
@@ -1521,7 +1532,7 @@
 ;;;   ~gesture-evaluate-single-joint-handler 
 ;;; PARAMETERS:
 ;;;   gesture, a gseture function
-;;;   joint, a joint vecor
+;;;   oscjoint, an oscstring for a joint
 ;;;   handler, a handler function
 ;;; PURPOSE: 
 ;;;   evaluates the handler function then sets the joint to ignored if 
@@ -1533,16 +1544,18 @@
 ;;; POSTCONDITIONS:
 ;;;   if gesture was multidirectional, joint is now ignored
 (define ~gesture-evaluate-single-joint-handler 
-   (lambda (gesture joint handler)      
-      (handler)
+   (lambda (gesture oscjoint handler)
+      (if PARAMETERS      
+          (handler oscjoint)
+          (handler))
       (if (multidirectional? gesture)
-          (~list-prepend! ignored joint))))
+          (~list-prepend! ignored oscjoint))))
 
 ;;; PROCEDURE:
 ;;;   ~gesture-evaluate-single-joint 
 ;;; PARAMETERS:
 ;;;   gesture, a gesture function
-;;;   joint, a joint vector
+;;;   oscjoint, an oscstring for a joint
 ;;;   handler, a handler function
 ;;; PURPOSE: 
 ;;;   determines if the gesture is true for the joint and calls handler processing
@@ -1556,10 +1569,10 @@
 ;;;   if the preconditions are met and the gesture is true for the joint, calls
 ;;;   ~gesture-evaluate-single-joint-handler
 (define ~gesture-evaluate-single-joint
-   (lambda (gesture joint handler)
-      (if (and (not (~ignored? joint)) (not (equal? handler 'NULL)))
-          (if (gesture (oscstring->joint joint))
-              (~gesture-evaluate-single-joint-handler gesture joint handler)))))
+   (lambda (gesture oscjoint handler)
+      (if (and (not (~ignored? oscjoint)) (not (equal? handler 'NULL)))
+          (if (gesture (oscstring->joint oscjoint))
+              (~gesture-evaluate-single-joint-handler gesture oscjoint handler)))))
 
 ;;; PROCEDURE:
 ;;;   ~gesture-evaluate-single-joint-pair 
@@ -1644,7 +1657,8 @@
       (let ((pair (assoc gesture two-handed-gestures)))
          (if pair 
              (set-cdr! pair function)
-             (error "gesture not found")))))
+             (print-error 'gesture-change-handler!:
+                          (string->symbol "gesture not found."))))))
 
 ;;; PROCEDURE:
 ;;;   ~gesture-single-joint-change-handler!
@@ -1666,7 +1680,8 @@
       (let ((pair (assoc gesture single-joint-gestures)))
          (if (and pair (enabled? oscjoint))
              (set-cdr! (assoc oscjoint (cdr pair)) function)
-             (error "gesture not found")))))
+             (print-error 'gesture-change-handler!:
+                          (string->symbol "gesture not found."))))))
 
 ;;; PROCEDURE:
 ;;;   gesture-change-handler!
@@ -1770,6 +1785,29 @@
 
 
 ;----------; PROGRAMMER CONTROLS ;----------;
+
+;;; PROCEDURE:
+;;;   context-toggle-parameter-passing! 
+;;; PARAMETERS:
+;;;   NULL
+;;; PURPOSE: 
+;;;   turns parameter passing on or off
+;;; PRODUCED: 
+;;;   NULL, called for side effects
+;;; PRECONDITIONS:
+;;;   PARAMETERS is state of parameter passing
+;;; POSTCONDITIONS:
+;;;   switches the state of PARAMETERS
+;;;   if PARAMETERS is #t, joint info is passed to handlers
+;;;   if PARAMETERS is #f, handlers are called without parameters
+(define context-toggle-parameter-passing!
+   (lambda ()
+      (set! PARAMETERS (not PARAMETERS))
+      (if PARAMETERS
+          (print-notification 'context-toggle-parameter-passing!:
+                              (string->symbol "joint info is now being sent to handlers"))
+          (print-notification 'context-toggle-parameter-passing!:
+                              (string->symbol "joint info no longer being sent to handlers")))))
 
 ;;; PROCEDURE:
 ;;;   context-set-user! 
@@ -1903,7 +1941,8 @@
 (define gestures-start!
    (lambda ()
       (set! DONE #f)
-      (~track-gestures)))
+      (~track-gestures)
+      (print-notification 'gestures-start!: (string->symbol "now tracking gestures!"))))
 
 ;;; PROCEDURE:
 ;;;   gestures-stop! 
@@ -1919,4 +1958,5 @@
 ;;;   DONE is now #t and gestures are not being processed
 (define gestures-stop! 
    (lambda ()
-      (set! DONE #t)))
+      (set! DONE #t)
+      (print-notification 'gestures-stop!: (string->symbol "gesture tracking has been stopped."))))

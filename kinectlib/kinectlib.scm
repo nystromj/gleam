@@ -3,7 +3,7 @@
 ;----------; GLOBALS ;----------;
 
 ;;; determines whether gestures should be detected
-(define DONE #t)
+(define TRACKING #f)
 
 ;;; determines whether joint information should be passed to handlers
 (define PARAMETERS #f)
@@ -607,7 +607,7 @@
 ;;;   calls ~oscdata-process if user's id matches the current user-id
 (define io:osc:receive 
    (lambda (timestamp address . args)
-   (if (and (equal? (list-ref args 1) user-id) (not DONE))
+   (if (and (equal? (list-ref args 1) user-id) TRACKING)
        (~oscdata-process args))))
 
 
@@ -1628,10 +1628,10 @@
 ;;;   called by start!, not explicity by programmer
 ;;;   frequency of loop is determined by refresh-rate
 ;;; POSTCONDITIONS:
-;;;   continues until DONE is declared #t
+;;;   continues until TRACKING is declared #f
 (define ~track-gestures
    (lambda ()
-      (when (not DONE)
+      (when TRACKING
             (~gesture-evaluate-all)
             (callback (+ (now) refresh-rate) '~track-gestures))))
 
@@ -1807,9 +1807,9 @@
          (print-note "---------------------------------------------------------")
          (print-note "|   CURRENT SETTINGS   |")
          (print-note "------------------------")
-         (if DONE
-             (print-note "  Gestures are not being tracked.")
-             (print-note "  Gestures are currently being tracked."))
+         (if TRACKING
+             (print-note "  Gestures are currently being tracked.")
+             (print-note "  Gestures are not being tracked."))
          (if PARAMETERS
              (print-note "  Joint information is currently being sent to handlers.")
              (print-note "  Joint information is not being sent to parameters."))
@@ -1971,12 +1971,12 @@
 ;;; PRODUCED: 
 ;;;   NULL, called for side effects
 ;;; PRECONDITIONS:
-;;;   DONE is currently #t
+;;;   TRACKING is currently #f
 ;;; POSTCONDITIONS:
-;;;   DONE is now #f and gestures are being processed
+;;;   TRACKING is now #t and gestures are being processed
 (define gestures-start!
    (lambda ()
-      (set! DONE #f)
+      (set! TRACKING #t)
       (~track-gestures)
       (print-notification 'gestures-start!: (string->symbol "now tracking gestures!"))))
 
@@ -1989,10 +1989,10 @@
 ;;; PRODUCED: 
 ;;;   NULL, called for side effects
 ;;; PRECONDITIONS:
-;;;   DONE is currently #f
+;;;   TRACKING is currently #t
 ;;; POSTCONDITIONS:
-;;;   DONE is now #t and gestures are not being processed
+;;;   TRACKING is now #f and gestures are not being processed
 (define gestures-stop! 
    (lambda ()
-      (set! DONE #t)
+      (set! TRACKING #f)
       (print-notification 'gestures-stop!: (string->symbol "gesture tracking has been stopped."))))

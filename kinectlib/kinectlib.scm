@@ -16,8 +16,11 @@
 ;;; determines the user whose gestures are being evaluated
 (define user-id 1)
 
-;;; the amount a joint must move before it is considered a movement
+;;; the amount a joint must move along the x or y axis before it is considered a movement
 (define movement-threshold 0.05)
+
+;;; the amount a joint must move along the z axis before it is considered a movement.
+(define z-movement-threshold .1)
 
 ;;; speed thresholds to determine if the joint is moving slowly or quickly
 (define fast-threshold .15)
@@ -429,16 +432,17 @@
 ;;;   boolean, whether the joint as moved
 ;;; PRECONDITIONS:
 ;;;   procedure should be called only by ~axis-store-pos!
-;;;   movement-threshold defines the amount the joint must move before movement
+;;;   movement-threshold defines the amount the joint must move up or down before movement
 ;;;   is established
+;;;   z-movement-threshold is the amount the joint must move along the z axis before movement
 ;;; POSTCONDITIONS:
 ;;;   returns true if the distance between the last saved joint position and the 
-;;;   current joint position is greater than or equal to movement-threshold
+;;;   current joint position is greater than or equal to movement-threshold or z-movement-threshold
 (define ~axis-moved? 
    (lambda (joint axis new-pos)
       (if (equal? axis z)
           (> (abs (- (/ (axis-get-current-pos joint axis) 100) new-pos)) 
-             (* 2 movement-threshold))
+             z-movement-threshold)
           (> (abs (- (/ (axis-get-current-pos joint axis) 100) new-pos)) 
              movement-threshold))))
 
@@ -828,10 +832,6 @@
                   (axis-get-current-time joint2 axis2)))
           simultaneous-threshold)))
 
-(define gesture-joint-still
-   (lambda (joint)
-      (~joint-still? joint)))
-
 (define gesture-joint-right
    (lambda (joint)
       (~joint-right? joint)))
@@ -855,6 +855,10 @@
 (define gesture-joint-backward
    (lambda (joint)
       (~joint-backward? joint)))
+
+(define gesture-joint-still
+   (lambda (joint)
+      (~joint-still? joint)))
 
 (define gesture-joint-right-up
    (lambda (joint)
@@ -1048,38 +1052,6 @@
               (gesture-joint-backward right)
               (~simultaneous? left z right z)))))
 
-(define gesture-both-hands-up-in
-   (lambda ()
-      (let ((left (oscstring->joint "l_hand"))
-            (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-right-up left)
-              (gesture-joint-left-up right)
-              (~simultaneous? left y right y)))))
-
-(define gesture-both-hands-down-out
-   (lambda ()
-      (let ((left (oscstring->joint "l_hand"))
-            (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-left-down left)
-              (gesture-joint-right-down right)
-              (~simultaneous? left y right y)))))
-
-(define gesture-both-hands-up-out
-   (lambda ()
-      (let ((left (oscstring->joint "l_hand"))
-            (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-right-up right)
-              (gesture-joint-left-up left)
-              (~simultaneous? left y right y)))))
-
-(define gesture-both-hands-down-in 
-   (lambda ()
-      (let ((left (oscstring->joint "l_hand"))
-            (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-right-down left)
-              (gesture-joint-left-down right)
-              (~simultaneous? left y right y)))))
-
 (define gesture-right-hand-forward-left-hand-backward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1095,38 +1067,6 @@
          (and (gesture-joint-forward left)
               (gesture-joint-backward right)
               (~simultaneous? left z right z)))))
-
-(define gesture-both-hands-up-forward
-   (lambda ()
-      (let ((left (oscstring->joint "l_hand"))
-            (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-up-forward right)
-              (gesture-joint-up-forward left)
-              (~simultaneous? left y right y)))))
-
-(define gesture-both-hands-up-backward
-   (lambda ()
-      (let ((left (oscstring->joint "l_hand"))
-            (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-up-backward right)
-              (gesture-joint-up-backward left)
-              (~simultaneous? left y right y))))) 
-
-(define gesture-both-hands-down-forward
-   (lambda ()
-      (let ((left (oscstring->joint "l_hand"))
-            (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-down-forward right)
-              (gesture-joint-down-forward left)
-              (~simultaneous? left y right y)))))
-
-(define gesture-both-hands-down-backward
-   (lambda ()
-      (let ((left (oscstring->joint "l_hand"))
-            (right (oscstring->joint "r_hand")))
-         (and (gesture-joint-down-backward right)
-              (gesture-joint-down-backward left)
-              (~simultaneous? left y right y)))))
 
 (define gesture-both-hands-right-up
    (lambda ()
@@ -1192,6 +1132,70 @@
               (gesture-joint-left-backward left)
               (~simultaneous? left z right z)))))
 
+(define gesture-both-hands-up-in
+   (lambda ()
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right-up left)
+              (gesture-joint-left-up right)
+              (~simultaneous? left y right y)))))
+
+(define gesture-both-hands-up-out
+   (lambda ()
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right-up right)
+              (gesture-joint-left-up left)
+              (~simultaneous? left y right y)))))
+
+(define gesture-both-hands-down-in 
+   (lambda ()
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-right-down left)
+              (gesture-joint-left-down right)
+              (~simultaneous? left y right y)))))
+
+(define gesture-both-hands-down-out
+   (lambda ()
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-left-down left)
+              (gesture-joint-right-down right)
+              (~simultaneous? left y right y)))))
+
+(define gesture-both-hands-up-forward
+   (lambda ()
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-up-forward right)
+              (gesture-joint-up-forward left)
+              (~simultaneous? left y right y)))))
+
+(define gesture-both-hands-up-backward
+   (lambda ()
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-up-backward right)
+              (gesture-joint-up-backward left)
+              (~simultaneous? left y right y))))) 
+
+(define gesture-both-hands-down-forward
+   (lambda ()
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-down-forward right)
+              (gesture-joint-down-forward left)
+              (~simultaneous? left y right y)))))
+
+(define gesture-both-hands-down-backward
+   (lambda ()
+      (let ((left (oscstring->joint "l_hand"))
+            (right (oscstring->joint "r_hand")))
+         (and (gesture-joint-down-backward right)
+              (gesture-joint-down-backward left)
+              (~simultaneous? left y right y)))))
+
 (define gesture-both-hands-still 
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1202,58 +1206,33 @@
 
 ;----------; GESTURE SET UP ;----------;
 
-;;; two-handed gestures do not take joints as parameters and have only one handler
-(define two-handed-gestures
-   (map (lambda (gesture)
-           (cons gesture 'NULL))
-        (list gesture-both-hands-right
-              gesture-both-hands-left
-              gesture-both-hands-in
-              gesture-both-hands-away
-              gesture-both-hands-up
-              gesture-both-hands-down
-              gesture-right-hand-up-left-hand-down
-              gesture-right-hand-down-left-hand-up
-              gesture-both-hands-forward
-              gesture-both-hands-backward
-              gesture-both-hands-up-in
-              gesture-both-hands-down-out
-              gesture-both-hands-up-out
-              gesture-both-hands-down-in
-              gesture-right-hand-forward-left-hand-backward
-              gesture-right-hand-backward-left-hand-forward
-              gesture-both-hands-up-forward
-              gesture-both-hands-up-backward
-              gesture-both-hands-down-forward
-              gesture-both-hands-down-backward
-              gesture-both-hands-right-up
-              gesture-both-hands-right-down
-              gesture-both-hands-right-forward
-              gesture-both-hands-right-backward
-              gesture-both-hands-left-up
-              gesture-both-hands-left-down
-              gesture-both-hands-left-forward
-              gesture-both-hands-left-backward
-              gesture-both-hands-still)))
+;;; simple gestures take a joint as a parameter and only deal with one axis
+(define simple-gestures
+   (list gesture-joint-right
+         gesture-joint-left
+         gesture-joint-up
+         gesture-joint-down
+         gesture-joint-forward
+         gesture-joint-backward
+         gesture-joint-still))
 
 ;;; PROCEDURE:
-;;;   two-handed? 
+;;;   simple? 
 ;;; PARAMETERS:
 ;;;   gesture, a gesture function
 ;;; PURPOSE: 
-;;;   determines whether the gesture is two-handed
+;;;   determines whether the gesture function is a simple gesture
 ;;; PRODUCED: 
-;;;   boolean, whether the gesture is two-handed
+;;;   boolean, whether the gesture is simple
 ;;; PRECONDITIONS:
 ;;;   gesture is a predefined function
 ;;; POSTCONDITIONS:
-;;;   returns true if gesture is a member of two-handed-gestures list
-(define two-handed?
-   (lambda (gesture) 
-      (let ((member (assoc gesture two-handed-gestures)))
-       (if member
-           #t
-           #f))))
+;;;   returns true if gesture is a member of simple-gestures list
+(define simple? 
+   (lambda (gesture)
+         (if (member gesture simple-gestures)
+             #t
+             #f)))
 
 ;;; multidirectional gestures take a joint as a parameter and determine if there
 ;;; is movement in multiple directions
@@ -1297,39 +1276,81 @@
              #t
              #f)))
 
-;;; simple gestures take a joint as a parameter and only deal with one axis
-(define simple-gestures
-   (list gesture-joint-up
-      gesture-joint-down
-      gesture-joint-right
-      gesture-joint-left
-      gesture-joint-forward
-      gesture-joint-backward
-      gesture-joint-still))
-
-;;; PROCEDURE:
-;;;   simple? 
-;;; PARAMETERS:
-;;;   gesture, a gesture function
-;;; PURPOSE: 
-;;;   determines whether the gesture function is a simple gesture
-;;; PRODUCED: 
-;;;   boolean, whether the gesture is simple
-;;; PRECONDITIONS:
-;;;   gesture is a predefined function
-;;; POSTCONDITIONS:
-;;;   returns true if gesture is a member of simple-gestures list
-(define simple? 
-   (lambda (gesture)
-         (if (member gesture simple-gestures)
-             #t
-             #f)))
-
 ;;; appends the list of joint gestures together and adds default handlers
 (define single-joint-gestures (map (lambda (elt)
                          (cons elt (list (cons "l_hand" 'NULL)
                                          (cons "r_hand" 'NULL))))
                       (append multidirectional-gestures simple-gestures)))
+
+;;; PROCEDURE:
+;;;   single-joint? 
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;; PURPOSE: 
+;;;   determines whether the gesture function is a single-joint gesture
+;;; PRODUCED: 
+;;;   boolean, whether the gesture is single-joint
+;;; PRECONDITIONS:
+;;;   gesture is a predefined function
+;;; POSTCONDITIONS:
+;;;   returns true if gesture is a member of single-joint-gestures list
+(define single-joint? 
+   (lambda (gesture)
+         (if (assoc gesture single-joint-gestures)
+             #t
+             #f)))
+
+;;; two-handed gestures do not take joints as parameters and have only one handler
+(define two-handed-gestures
+   (map (lambda (gesture)
+           (cons gesture 'NULL))
+        (list gesture-both-hands-right
+              gesture-both-hands-left
+              gesture-both-hands-in
+              gesture-both-hands-away
+              gesture-both-hands-up
+              gesture-both-hands-down
+              gesture-right-hand-up-left-hand-down
+              gesture-right-hand-down-left-hand-up
+              gesture-both-hands-forward
+              gesture-both-hands-backward
+              gesture-right-hand-forward-left-hand-backward
+              gesture-right-hand-backward-left-hand-forward
+              gesture-both-hands-right-up
+              gesture-both-hands-right-down
+              gesture-both-hands-right-forward
+              gesture-both-hands-right-backward
+              gesture-both-hands-left-up
+              gesture-both-hands-left-down
+              gesture-both-hands-left-forward
+              gesture-both-hands-left-backward
+              gesture-both-hands-up-in
+              gesture-both-hands-up-out
+              gesture-both-hands-down-in
+              gesture-both-hands-down-out
+              gesture-both-hands-up-forward
+              gesture-both-hands-up-backward
+              gesture-both-hands-down-forward
+              gesture-both-hands-down-backward
+              gesture-both-hands-still)))
+
+;;; PROCEDURE:
+;;;   two-handed? 
+;;; PARAMETERS:
+;;;   gesture, a gesture function
+;;; PURPOSE: 
+;;;   determines whether the gesture is two-handed
+;;; PRODUCED: 
+;;;   boolean, whether the gesture is two-handed
+;;; PRECONDITIONS:
+;;;   gesture is a predefined function
+;;; POSTCONDITIONS:
+;;;   returns true if gesture is a member of two-handed-gestures list
+(define two-handed?
+   (lambda (gesture)
+      (if (assoc gesture two-handed-gestures)
+          #t
+          #f)))
 
 
 ;----------; ADDING AND REMOVING JOINTS ;----------;
@@ -1815,6 +1836,7 @@
              (print-note "  Joint information is not being sent to parameters."))
          (print-note "  Currently tracking user" user-id)
          (print-note "  Movement-threshold is:" movement-threshold)
+         (print-note "  Z-movement-threshold is:" z-movement-threshold)
          (print-note "  Fast-threshold is:" fast-threshold)
          (print-note "  Slow-threshold is:" slow-threshold)
          (print-note "  Still-threshold is:" still-threshold)
@@ -1870,13 +1892,30 @@
 ;;; PRODUCED: 
 ;;;   NULL, called for side-effects
 ;;; PRECONDITIONS:
-;;;   movement-threshold is the distance a joint must move along an axis
+;;;   movement-threshold is the distance a joint must move along the x or y axis
 ;;;   until its movement is registered
 ;;; POSTCONDITIONS:
 ;;;   movement-threshold is now new-threshold
 (define context-set-movement-threshold! 
    (lambda (new-threshold)
       (set! movement-threshold new-threshold)))
+
+;;; PROCEDURE:
+;;;   context-set-z-movement-threshold!
+;;; PARAMETERS:
+;;;   new-threshold, an integer
+;;; PURPOSE: 
+;;;   changes the z-movement-threshold to new-threshold
+;;; PRODUCED: 
+;;;   NULL, called for side-effects
+;;; PRECONDITIONS:
+;;;   z-movement-threshold is the distance a joint must move along the z axis
+;;;   until its movement is registered
+;;; POSTCONDITIONS:
+;;;   z-movement-threshold is now new-threshold
+(define context-set-z-movement-threshold!
+   (lambda (new-threshold)
+      (set! z-movement-threshold new-threshold)))
 
 ;;; PROCEDURE:
 ;;;   context-set-fast-threshold! 

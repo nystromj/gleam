@@ -832,146 +832,183 @@
                   (axis-get-current-time joint2 axis2)))
           simultaneous-threshold)))
 
+
+;---; simple gestures ;---;
+
+;;; GESTURE: joint is moving to the right
 (define gesture-joint-right
    (lambda (joint)
       (~joint-right? joint)))
 
+;;; GESTURE: joint is moving to the left
 (define gesture-joint-left
    (lambda (joint)
       (~joint-left? joint)))
 
+;;; GESTURE: joint is moving up
 (define gesture-joint-up
    (lambda (joint)
       (~joint-up? joint)))
 
+;;; GESTURE: joint is moving down
 (define gesture-joint-down
    (lambda (joint)
       (~joint-down? joint)))
 
+;;; GESTURE: joint is moving forward
 (define gesture-joint-forward
    (lambda (joint)
       (~joint-forward? joint)))
 
+;;; GESTURE: joint is moving backward
 (define gesture-joint-backward
    (lambda (joint)
       (~joint-backward? joint)))
 
+;;; GESTURE: joint is still
 (define gesture-joint-still
    (lambda (joint)
       (~joint-still? joint)))
 
+
+;---; multidirectional gestures ;---;
+
+;;; GESTURE: joint is moving to the right and up 
 (define gesture-joint-right-up
    (lambda (joint)
       (and (gesture-joint-up joint)
            (gesture-joint-right joint)
            (~simultaneous? joint x joint y))))
 
+;;; GESTURE: joint is moving to the right and down 
 (define gesture-joint-right-down
    (lambda (joint)
       (and (gesture-joint-down joint)
            (gesture-joint-right joint)
            (~simultaneous? joint x joint y))))
 
+;;; GESTURE: joint is moving to the right and forward 
 (define gesture-joint-right-forward
    (lambda (joint)
       (and (gesture-joint-forward joint)
            (gesture-joint-right joint)
            (~simultaneous? joint x joint z))))
 
+;;; GESTURE: joint is moving to the right and backward 
 (define gesture-joint-right-backward
    (lambda (joint)
       (and (gesture-joint-backward joint)
            (gesture-joint-right joint)
            (~simultaneous? joint x joint z))))
 
+;;; GESTURE: joint is moving to the left and up 
 (define gesture-joint-left-up
    (lambda (joint)
       (and (gesture-joint-up joint)
            (gesture-joint-left joint)
            (~simultaneous? joint x joint y))))
 
+;;; GESTURE: joint is moving to the left and down 
 (define gesture-joint-left-down
    (lambda (joint)
       (and (gesture-joint-down joint)
            (gesture-joint-left joint)
            (~simultaneous? joint x joint y))))
 
+;;; GESTURE: joint is moving to the left and forward 
 (define gesture-joint-left-forward
    (lambda (joint)
       (and (gesture-joint-forward joint)
            (gesture-joint-left joint)
            (~simultaneous? joint x joint z))))
 
+;;; GESTURE: joint is moving to the left and backward 
 (define gesture-joint-left-backward
    (lambda (joint)
       (and (gesture-joint-backward joint)
            (gesture-joint-left joint)
            (~simultaneous? joint x joint z))))
 
+;;; GESTURE: joint is moving up and forward 
 (define gesture-joint-up-forward
    (lambda (joint)
       (and (gesture-joint-forward joint)
            (gesture-joint-up joint)
            (~simultaneous? joint y joint z))))
 
+;;; GESTURE: joint is moving up and backward 
 (define gesture-joint-up-backward
    (lambda (joint)
       (and (gesture-joint-backward joint)
            (gesture-joint-up joint)
            (~simultaneous? joint y joint z))))
 
+;;; GESTURE: joint is moving down and forward 
 (define gesture-joint-down-forward 
    (lambda (joint)
       (and (gesture-joint-forward joint)
            (gesture-joint-down joint)
            (~simultaneous? joint y joint z))))
 
+;;; GESTURE: joint is moving down and backward 
 (define gesture-joint-down-backward
    (lambda (joint)
       (and (gesture-joint-backward joint)
            (gesture-joint-down joint)
            (~simultaneous? joint y joint z))))
 
+;;; GESTURE: joint is moving to the right, up, and forward 
 (define gesture-joint-right-up-forward
    (lambda (joint)
       (and (gesture-joint-right-up joint)
            (gesture-joint-right-forward joint))))
 
+;;; GESTURE: joint is moving to the right, up, and backward
 (define gesture-joint-right-up-backward
    (lambda (joint)
       (and (gesture-joint-right-up joint)
            (gesture-joint-right-backward joint))))
 
+;;; GESTURE: joint is moving to the right, down, and forward 
 (define gesture-joint-right-down-forward
    (lambda (joint)
       (and (gesture-joint-right-down joint)
            (gesture-joint-right-forward joint))))
 
+;;; GESTURE: joint is moving to the right, down, and backward
 (define gesture-joint-right-down-backward 
    (lambda (joint)
       (and (gesture-joint-right-down joint)
            (gesture-joint-right-backward joint))))
 
+;;; GESTURE: joint is moving to the left, up, and forward
 (define gesture-joint-left-up-forward
    (lambda (joint)
       (and (gesture-joint-left-up joint)
            (gesture-joint-left-forward joint))))
 
+;;; GESTURE: joint is moving to the left, up, and backward
 (define gesture-joint-left-up-backward
    (lambda (joint)
       (and (gesture-joint-left-up joint)
            (gesture-joint-left-backward joint))))
 
+;;; GESTURE: joint is moving to the left, down, and forward
 (define gesture-joint-left-down-forward
    (lambda (joint)
       (and (gesture-joint-left-down joint)
            (gesture-joint-left-forward joint))))
 
+;;; GESTURE: joint is moving to the left, down, and backward
 (define gesture-joint-left-down-backward
    (lambda (joint)
       (and (gesture-joint-left-down joint)
            (gesture-joint-left-backward joint))))
 
+
+;---; two-handed-gestures ;---;
+
+;;; GESTURE: both hands are moving to the right
 (define gesture-both-hands-right
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -980,6 +1017,7 @@
               (gesture-joint-right right)
               (~simultaneous? left x right x)))))
 
+;;; GESTURE: both hands are moving to the left
 (define gesture-both-hands-left
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -988,6 +1026,7 @@
               (gesture-joint-left right)
               (~simultaneous? left x right x)))))
 
+;;; GESTURE: both hands are moving towards the body
 (define gesture-both-hands-in
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -996,6 +1035,7 @@
               (gesture-joint-left right)
               (~simultaneous? left x right x)))))
 
+;;; GESTURE: both hands are moving away from the body
 (define gesture-both-hands-away
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1004,6 +1044,7 @@
               (gesture-joint-left left)
               (~simultaneous? left x right x)))))
 
+;;; GESTURE: both hands are moving up
 (define gesture-both-hands-up
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1012,6 +1053,7 @@
               (gesture-joint-up right)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving down
 (define gesture-both-hands-down
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1020,6 +1062,7 @@
               (gesture-joint-down right)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: the right hand is moving up while the left is moving down
 (define gesture-right-hand-up-left-hand-down
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1028,6 +1071,7 @@
               (gesture-joint-down left)
               (~simultaneous? left y right y)))))      
 
+;;; GESTURE: the right hand is moving down while the left hand is moving up
 (define gesture-right-hand-down-left-hand-up
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1036,6 +1080,7 @@
               (gesture-joint-down right)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving forward
 (define gesture-both-hands-forward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1044,6 +1089,7 @@
               (gesture-joint-forward right)
               (~simultaneous? left z right z)))))
 
+;;; GESTURE: both hands are moving backward
 (define gesture-both-hands-backward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1052,6 +1098,7 @@
               (gesture-joint-backward right)
               (~simultaneous? left z right z)))))
 
+;;; GESTURE: the right hand is moving forward while the left hand is moving backward
 (define gesture-right-hand-forward-left-hand-backward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1060,6 +1107,7 @@
               (gesture-joint-backward left)
               (~simultaneous? left z right z)))))
 
+;;; GESTURE: the right hand is moving backward while the left hand is moving forward
 (define gesture-right-hand-backward-left-hand-forward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1068,6 +1116,7 @@
               (gesture-joint-backward right)
               (~simultaneous? left z right z)))))
 
+;;; GESTIRE: both hands are moving to the right and up
 (define gesture-both-hands-right-up
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1076,6 +1125,7 @@
               (gesture-joint-right-up left)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving to the right and down
 (define gesture-both-hands-right-down
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1084,6 +1134,7 @@
               (gesture-joint-right-down left)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving to the right and forward
 (define gesture-both-hands-right-forward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1092,6 +1143,7 @@
               (gesture-joint-right-forward left)
               (~simultaneous? left z right z)))))
 
+;;; GESTURE: both hands are moving to the right and backward
 (define gesture-both-hands-right-backward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1100,6 +1152,7 @@
               (gesture-joint-right-backward left)
               (~simultaneous? left z right z)))))
 
+;;; GESTURE: both hands are moving to the left and up
 (define gesture-both-hands-left-up
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1108,6 +1161,7 @@
               (gesture-joint-left-up left)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving to the left and down
 (define gesture-both-hands-left-down
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1116,6 +1170,7 @@
               (gesture-joint-left-down left)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving to the left and forward
 (define gesture-both-hands-left-forward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1124,6 +1179,7 @@
               (gesture-joint-left-forward left)
               (~simultaneous? left z right z)))))
 
+;;; GESTURE: both hands are moving to the left and backward
 (define gesture-both-hands-left-backward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1132,6 +1188,7 @@
               (gesture-joint-left-backward left)
               (~simultaneous? left z right z)))))
 
+;;; GESTURE: both hands are moving up and towards the body
 (define gesture-both-hands-up-in
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1140,6 +1197,7 @@
               (gesture-joint-left-up right)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving up and away from the body
 (define gesture-both-hands-up-out
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1148,6 +1206,7 @@
               (gesture-joint-left-up left)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving down and towards the body
 (define gesture-both-hands-down-in 
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1156,6 +1215,7 @@
               (gesture-joint-left-down right)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving down and away from the body
 (define gesture-both-hands-down-out
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1164,6 +1224,7 @@
               (gesture-joint-right-down right)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving up and forward
 (define gesture-both-hands-up-forward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1172,6 +1233,7 @@
               (gesture-joint-up-forward left)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving up and backward
 (define gesture-both-hands-up-backward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1180,6 +1242,7 @@
               (gesture-joint-up-backward left)
               (~simultaneous? left y right y))))) 
 
+;;; GESTURE: both hands are moving down and forward
 (define gesture-both-hands-down-forward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1188,6 +1251,7 @@
               (gesture-joint-down-forward left)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are moving down and backward
 (define gesture-both-hands-down-backward
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
@@ -1196,6 +1260,7 @@
               (gesture-joint-down-backward left)
               (~simultaneous? left y right y)))))
 
+;;; GESTURE: both hands are still
 (define gesture-both-hands-still 
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))

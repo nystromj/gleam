@@ -1367,26 +1367,10 @@
 (define two-handed-gestures
    (map (lambda (gesture)
            (cons gesture 'NULL))
-        (list gesture-both-hands-right
-              gesture-both-hands-left
-              gesture-both-hands-in
-              gesture-both-hands-out
-              gesture-both-hands-up
-              gesture-both-hands-down
-              gesture-right-hand-up-left-hand-down
+        (list gesture-right-hand-up-left-hand-down
               gesture-right-hand-down-left-hand-up
-              gesture-both-hands-forward
-              gesture-both-hands-backward
               gesture-right-hand-forward-left-hand-backward
               gesture-right-hand-backward-left-hand-forward
-              gesture-both-hands-right-up
-              gesture-both-hands-right-down
-              gesture-both-hands-right-forward
-              gesture-both-hands-right-backward
-              gesture-both-hands-left-up
-              gesture-both-hands-left-down
-              gesture-both-hands-left-forward
-              gesture-both-hands-left-backward
               gesture-both-hands-up-in
               gesture-both-hands-up-out
               gesture-both-hands-down-in
@@ -1395,6 +1379,22 @@
               gesture-both-hands-up-backward
               gesture-both-hands-down-forward
               gesture-both-hands-down-backward
+              gesture-both-hands-right-up
+              gesture-both-hands-right-down
+              gesture-both-hands-right-forward
+              gesture-both-hands-right-backward
+              gesture-both-hands-left-up
+              gesture-both-hands-left-down
+              gesture-both-hands-left-forward
+              gesture-both-hands-left-backward
+              gesture-both-hands-in
+              gesture-both-hands-out
+              gesture-both-hands-right
+              gesture-both-hands-left
+              gesture-both-hands-up
+              gesture-both-hands-down
+              gesture-both-hands-forward
+              gesture-both-hands-backward
               gesture-both-hands-still)))
 
 ;;; PROCEDURE:

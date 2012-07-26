@@ -545,7 +545,7 @@
 ;;;   if the joint has moved along the given axis, it stores the new position
 ;;;   if the joint has not moved, calls ~axis-update!
 (define ~oscdata-process-axis-coordinates
-   (lambda (joint axis coord)
+   (lambda (joint axis new-pos)
       (if (~axis-moved? joint axis new-pos)
           (~axis-store-pos! joint axis new-pos)
           (~axis-update! joint axis))))
@@ -1034,7 +1034,7 @@
               (~simultaneous? left x right x)))))
 
 ;;; GESTURE: returns whether both hands are moving away from the body
-(define gesture-both-hands-away
+(define gesture-both-hands-out
    (lambda ()
       (let ((left (oscstring->joint "l_hand"))
             (right (oscstring->joint "r_hand")))
@@ -1370,7 +1370,7 @@
         (list gesture-both-hands-right
               gesture-both-hands-left
               gesture-both-hands-in
-              gesture-both-hands-away
+              gesture-both-hands-out
               gesture-both-hands-up
               gesture-both-hands-down
               gesture-right-hand-up-left-hand-down

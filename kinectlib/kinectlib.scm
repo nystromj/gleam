@@ -2064,6 +2064,8 @@
    (lambda (new-rate)
       (set! refresh-rate new-rate)))
 
+(context-print-status)
+
 ;;; PROCEDURE:
 ;;;   gestures-start! 
 ;;; PARAMETERS:

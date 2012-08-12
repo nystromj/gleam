@@ -48,15 +48,13 @@ struct filter {
 //   Functions   |                                                            
 //---------------+ 
 
-void error (int num, const char *m, const char *path);
+void error (int num, const char * msg, const char * path);
 
-int valid_port (char * port);
+int joint_handler (const char *path, const char *types, lo_arg **argv, 
+		   int argc, void *data, void *user_data);
 
-int joint_handler (const char *path, const char *types, lo_arg **argv, int argc,
-		   void *data, void *user_data);
-
-int quit_handler (const char *path, const char *types, lo_arg **argv, int argc,
-		  void *data, void *user_data);
+int quit_handler (const char *path, const char *types, lo_arg **argv, 
+		  int argc, void *data, void *user_data);
 
 //------------+----------------------------------------------------------------
 //    Main    |
@@ -68,8 +66,8 @@ int main (int argc, char * argv[]) {
   static struct filter ftr;   // stores data to be passed to handler
   int i, j;                   // index variables
 
-  /* Set up the filter signature.  The signature helps us verify that things that
-     we think are filters are actually filters. */
+  /* Set up the filter signature.  The signature helps us verify that things 
+   * that we think are filters are actually filters. */
   srandom ((unsigned int) time (NULL));
   FILTER_SIGNATURE = random ();
 
@@ -80,22 +78,8 @@ int main (int argc, char * argv[]) {
       exit (1);
     } // if
 
-  /* make sure read port is valid (currently a stub) */
-  if (!valid_port (argv[1]))
-    {
-      printf (" -Invalid Read Port- ");
-      exit (1);
-    } // if
-
-  /* make sure write port is valid (currently a stub) */
-  if (!valid_port (argv[2]))
-    {
-      printf (" -Invalid Write Port -");
-      exit (2);
-    } // if
-
-  /* if ports are okay, start a new server with error handler */
-  st = lo_server_thread_new (argv[1], error);
+  /* start a new server and set up write port */
+  st = lo_server_thread_new (argv[1], &error);
   addr = lo_address_new ("127.0.0.1", argv[2]);
 
   /* setup filter structure to be passed to joint handler */
@@ -137,13 +121,8 @@ int main (int argc, char * argv[]) {
 
 /* error handler */
 void error (int num, const char *msg, const char *path) {
-  printf("liblo server error %d in path %s: %s\n", num, path, msg);
+  printf ("liblo server error %d: %s\n", num, msg);
 } // error
-
-/* stub for validating ports... to be implemented later */
-int valid_port (char * port) {
-  return 1;
-} // valid_port
  
 /* catch joint messages and send only l_hand and r_hand messages */
 int joint_handler (const char *path, const char *types, lo_arg **argvx, 

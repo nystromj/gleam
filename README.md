@@ -6,7 +6,7 @@ The Grinnell Livescripting Environment for Art and Music, or GLEAM, is part of G
 
 The kinectlib/ subdirectory contains kinectlib.scm, the Scheme library that can be loaded into Impromptu to enable gesture-tracking. The osc_tools/ subdirectory contains a patch for OSCeleton that adds oscfilter.c, a filter for the OSC messages sent by OSCeleton. The patch must be added to OSCeleton for skeleton tracking to work correctly in Impromptu.
 
-For more information, please see the [project wiki](http://foswiki.cs.grinnell.edu/foswiki/bin/view/Glimmer/GleamWiki "GleamWiki").
+For more information on setting up GLEAM and using the gesture libray, please see our github wiki.
 
 ## License
 
